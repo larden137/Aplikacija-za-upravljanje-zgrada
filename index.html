@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZgradaApp – Upravljanje Zgradama</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏢</text></svg>">
+  <!-- Bootstrap se koristi za osnovni grid sistem, forme, dugmad i modalne prozore. -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons daje ikonice za meni, statuse, obavijesti i akcije. -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <!-- Glavni stylesheet aplikacije; svi stilovi projekta su odvojeni u css/style.css. -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- Stranica za prijavu: prikazuje se dok korisnik nije prijavljen. -->
+<div id="login-page" style="display:none">
+  <div class="login-card">
+    <div class="login-logo">
+      <i class="bi bi-buildings-fill"></i>
+      <h2>ZgradaApp</h2>
+      <p>Sistem za upravljanje zahtjevima stanara</p>
+    </div>
+
+    <form id="login-form">
+      <div class="mb-3">
+        <label class="form-label" for="login-email">Email adresa</label>
+        <input type="email" class="form-control" id="login-email" placeholder="vaš@email.ba" required autofocus>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="login-pass">Lozinka</label>
+        <div class="input-group">
+          <input type="password" class="form-control" id="login-pass" placeholder="••••••••" required>
+          <button class="btn btn-outline-secondary" type="button"
+                  onclick="const i=document.getElementById('login-pass');i.type=i.type==='password'?'text':'password'">
+            <i class="bi bi-eye"></i>
+          </button>
+        </div>
+      </div>
+      <div id="login-error" class="alert alert-danger py-2 small" style="display:none"></div>
+      <button type="submit" class="btn btn-primary w-100 py-2 mt-1">
+        <i class="bi bi-box-arrow-in-right me-2"></i>Prijava
+      </button>
+    </form>
+
+    <!-- Demo nalozi služe za brzo testiranje različitih uloga u aplikaciji. -->
+    <div class="demo-accounts">
+      <h6><i class="bi bi-info-circle me-1"></i>Demo nalozi (kliknite za popunjavanje)</h6>
+      <div class="demo-row" onclick="App.fillDemo('admin@zgrada.ba','admin123')">
+        <span class="demo-role">Administrator</span>
+        <span class="demo-creds">admin@zgrada.ba / admin123</span>
+      </div>
+      <div class="demo-row" onclick="App.fillDemo('povjerenik1@zgrada.ba','test123')">
+        <span class="demo-role">Povjerenik</span>
+        <span class="demo-creds">povjerenik1@zgrada.ba / test123</span>
+      </div>
+      <div class="demo-row" onclick="App.fillDemo('uposlenik1@zgrada.ba','test123')">
+        <span class="demo-role">Uposlenik</span>
+        <span class="demo-creds">uposlenik1@zgrada.ba / test123</span>
+      </div>
+      <div class="demo-row" onclick="App.fillDemo('stanar1@zgrada.ba','test123')">
+        <span class="demo-role">Stanar</span>
+        <span class="demo-creds">stanar1@zgrada.ba / test123</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Glavni okvir aplikacije: sidebar, topbar i dinamički sadržaj stranica. -->
+<div id="app-wrapper" style="display:none; min-height:100vh">
+
+  <!-- Tamna pozadina koja se prikaže iza menija na manjim ekranima. -->
+  <div id="sidebar-overlay"></div>
+
+  <!-- Sidebar se puni iz JavaScript-a u zavisnosti od uloge prijavljenog korisnika. -->
+  <nav id="sidebar"></nav>
+
+  <!-- Desni dio aplikacije; ovdje se nalaze topbar i sadržaj stranica. -->
+  <div id="main-wrapper">
+
+    <!-- Gornja traka sa nazivom trenutne stranice i prečicom za obavijesti. -->
+    <header id="topbar">
+      <button id="sidebar-toggle" class="btn btn-sm btn-outline-secondary border-0">
+        <i class="bi bi-list" style="font-size:1.2rem"></i>
+      </button>
+      <h4 id="page-title">Dashboard</h4>
+      <div class="topbar-actions">
+        <button class="btn-notif" id="notif-topbar-btn" title="Obavijesti">
+          <i class="bi bi-bell"></i>
+          <span class="badge" id="notif-badge-topbar" style="display:none">0</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Sadržaj stranice se renderuje dinamički u jedan od ovih kontejnera. -->
+    <main id="page-content">
+
+      <!-- Dashboard: početni pregled statistika, tiketa i aktivnosti. -->
+      <div id="page-dashboard" class="page"></div>
+
+      <!-- Lista tiketa: prikaz zahtjeva prema ulozi korisnika. -->
+      <div id="page-tickets" class="page"></div>
+
+      <!-- Novi tiket: forma za prijavu problema ili zahtjeva. -->
+      <div id="page-new-ticket" class="page"></div>
+
+      <!-- Detalji tiketa: status, komentari, evidencija rada i priloge. -->
+      <div id="page-ticket-detail" class="page"></div>
+
+      <!-- Zgrade: pregled i administracija objekata. -->
+      <div id="page-buildings" class="page"></div>
+
+      <!-- Korisnici: administracija naloga dostupna administratoru. -->
+      <div id="page-users" class="page"></div>
+
+      <!-- Obavijesti: poruke koje nastaju promjenom statusa ili dodjelom tiketa. -->
+      <div id="page-notifications" class="page"></div>
+
+      <!-- Profil korisnika: osnovni podaci i povezani tiketi. -->
+      <div id="page-user-profile" class="page"></div>
+
+    </main>
+  </div>
+</div>
+
+<!-- Toast poruke: kratke potvrde i upozorenja korisniku. -->
+<div id="toast-container"></div>
+
+<!-- Vanjske biblioteke i glavni modul aplikacije. -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script type="module">
+  import DB from './js/db-adapter.js';
+  import Auth from './js/auth.js';
+  import App from './js/app.js';
+
+  window.DB = DB;
+  window.Auth = Auth;
+  window.App = App;
+
+  // Pokretanje aplikacije ide kroz jednu asinhronu funkciju kako bi se Supabase podaci učitali prije prikaza ekrana.
+  (async () => {
+    try {
+      await App.init();
+    } catch (error) {
+      console.error('Aplikacija se nije mogla pokrenuti:', error);
+      document.getElementById('login-page').style.display = 'flex';
+      const err = document.getElementById('login-error');
+      if (err) {
+        err.textContent = 'Greška pri pokretanju aplikacije. Provjerite Supabase postavke i konzolu.';
+        err.style.display = 'block';
+      }
+    }
+  })();
+</script>
+
+</body>
+</html>

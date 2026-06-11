@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.env
+.vs/
+.claude/
+*.vsidx
+.DS_Store

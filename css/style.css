@@ -1,0 +1,648 @@
+/*
+  Glavni stilovi aplikacije.
+  Fajl je podijeljen po cjelinama kako bi se lakše održavali sidebar, dashboard, tiketi, forme i responsive prikaz.
+*/
+
+:root {
+  --sidebar-width: 260px;
+  --sidebar-bg: #0f172a;
+  --sidebar-hover: rgba(255,255,255,0.08);
+  --sidebar-active: #2563eb;
+  --topbar-height: 60px;
+  --body-bg: #f1f5f9;
+  --card-shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.05);
+  --card-shadow-hover: 0 4px 12px rgba(0,0,0,.12);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--body-bg);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+/* ── Bočni meni ── */
+#sidebar {
+  width: var(--sidebar-width);
+  background: var(--sidebar-bg);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  z-index: 1040;
+  transition: transform .25s ease;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+#sidebar .sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 20px 16px;
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 700;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  text-decoration: none;
+  cursor: pointer;
+}
+#sidebar .sidebar-logo i { font-size: 1.6rem; color: #60a5fa; }
+
+#sidebar .sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+#sidebar .sidebar-user .user-name { color: #e2e8f0; font-size: .88rem; font-weight: 600; }
+#sidebar .sidebar-user .user-role { color: #94a3b8; font-size: .75rem; }
+
+#sidebar .sidebar-nav { list-style: none; padding: 10px 0; margin: 0; flex: 1; }
+#sidebar .sidebar-nav li a, #sidebar .sidebar-nav li button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  color: #94a3b8;
+  text-decoration: none;
+  font-size: .875rem;
+  border-radius: 8px;
+  margin: 2px 8px;
+  background: none;
+  border: none;
+  width: calc(100% - 16px);
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+#sidebar .sidebar-nav li a:hover, #sidebar .sidebar-nav li button:hover {
+  background: var(--sidebar-hover);
+  color: #e2e8f0;
+}
+#sidebar .sidebar-nav li.active > a, #sidebar .sidebar-nav li.active > button {
+  background: var(--sidebar-active);
+  color: #fff;
+}
+#sidebar .sidebar-nav li a i, #sidebar .sidebar-nav li button i { font-size: 1rem; }
+
+#sidebar .sidebar-section-title {
+  font-size: .68rem;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  padding: 14px 26px 4px;
+}
+
+#sidebar .sidebar-footer {
+  padding: 14px 16px;
+  border-top: 1px solid rgba(255,255,255,0.07);
+}
+#sidebar .sidebar-footer button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #94a3b8;
+  background: none;
+  border: none;
+  font-size: .875rem;
+  cursor: pointer;
+  padding: 8px 10px;
+  border-radius: 6px;
+  width: 100%;
+  transition: color .15s, background .15s;
+}
+#sidebar .sidebar-footer button:hover { background: rgba(239,68,68,.15); color: #f87171; }
+
+/* Oznaka u meniju pokazuje broj nepročitanih obavijesti ili novih tiketa. */
+.nav-badge {
+  background: #ef4444;
+  color: #fff;
+  font-size: .65rem;
+  border-radius: 10px;
+  padding: 1px 6px;
+  margin-left: auto;
+  font-weight: 700;
+}
+
+/* ── Glavni sadržaj ── */
+#main-wrapper {
+  margin-left: var(--sidebar-width);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  transition: margin .25s ease;
+}
+
+/* ── Gornja traka ── */
+#topbar {
+  height: var(--topbar-height);
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+}
+#topbar #sidebar-toggle { display: none; }
+#topbar #page-title { font-size: 1.05rem; font-weight: 600; color: #1e293b; margin: 0; flex: 1; }
+#topbar .topbar-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+#topbar .btn-notif {
+  position: relative;
+  background: none;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 6px 10px;
+  color: #64748b;
+  cursor: pointer;
+  transition: background .15s;
+}
+#topbar .btn-notif:hover { background: #f8fafc; }
+#topbar .btn-notif .badge {
+  position: absolute;
+  top: -4px; right: -4px;
+  background: #ef4444;
+  color: #fff;
+  font-size: .65rem;
+  border-radius: 10px;
+  padding: 1px 5px;
+  font-weight: 700;
+}
+#topbar .user-chip {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 10px 4px 4px;
+  border: 1px solid #e2e8f0;
+  border-radius: 24px;
+  background: #fff;
+  font-size: .85rem;
+  color: #1e293b;
+}
+
+/* ── Sadržaj stranica ── */
+#page-content { flex: 1; padding: 28px 28px 40px; }
+
+/* ── Avatar korisnika ── */
+.avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .78rem; font-weight: 700;
+  flex-shrink: 0;
+}
+.avatar-sm { width: 28px; height: 28px; font-size: .7rem; }
+.avatar-lg { width: 48px; height: 48px; font-size: 1rem; }
+.avatar-u1 { background:#dbeafe; color:#1d4ed8; }
+.avatar-u2 { background:#fce7f3; color:#be185d; }
+.avatar-u3 { background:#d1fae5; color:#065f46; }
+.avatar-u4 { background:#fef3c7; color:#92400e; }
+.avatar-u5 { background:#ede9fe; color:#5b21b6; }
+.avatar-u6 { background:#fee2e2; color:#991b1b; }
+.avatar-u7 { background:#e0f2fe; color:#075985; }
+.avatar-u8 { background:#f0fdf4; color:#15803d; }
+.avatar-u9 { background:#fff7ed; color:#c2410c; }
+.avatar-gen { background:#e2e8f0; color:#475569; }
+.avatar-u10 { background:#fdf4ff; color:#7e22ce; }
+.avatar-u11 { background:#ecfdf5; color:#065f46; }
+.avatar-u12 { background:#fff1f2; color:#be123c; }
+
+/* ── USER LINK ── */
+.user-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 2px 8px 2px 4px;
+  border-radius: 20px;
+  transition: background .12s, color .12s;
+  font-size: .85rem;
+  color: #1e293b;
+  border: 1px solid transparent;
+}
+.user-link:hover {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+.user-link .avatar { flex-shrink: 0; }
+
+/* ── Statističke kartice ── */
+.stat-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: var(--card-shadow);
+  border: 1px solid #f1f5f9;
+  transition: box-shadow .2s;
+}
+.stat-card:hover { box-shadow: var(--card-shadow-hover); }
+.stat-card .stat-icon {
+  width: 44px; height: 44px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.25rem;
+  margin-bottom: 12px;
+}
+.stat-card .stat-value { font-size: 1.9rem; font-weight: 700; color: #0f172a; line-height: 1; }
+.stat-card .stat-label { font-size: .8rem; color: #64748b; margin-top: 4px; }
+.stat-card .stat-change { font-size: .75rem; margin-top: 8px; }
+
+/* ── Osnovne kartice ── */
+.app-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: var(--card-shadow);
+  border: 1px solid #f1f5f9;
+  overflow: hidden;
+}
+.app-card .card-header-custom {
+  padding: 16px 20px;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.app-card .card-header-custom h6 { margin: 0; font-weight: 600; font-size: .9rem; color: #1e293b; }
+.app-card .card-body-custom { padding: 0; }
+
+/* ── Tabela tiketa ── */
+.ticket-table { width: 100%; border-collapse: collapse; }
+.ticket-table thead th {
+  padding: 10px 16px;
+  font-size: .75rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  border-bottom: 1px solid #f1f5f9;
+  background: #fafafa;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.ticket-table tbody tr {
+  border-bottom: 1px solid #f8fafc;
+  transition: background .12s;
+  cursor: pointer;
+}
+.ticket-table tbody tr:hover { background: #f8fafc; }
+.ticket-table tbody td { padding: 12px 16px; font-size: .875rem; color: #334155; vertical-align: middle; }
+.ticket-table tbody tr:last-child { border-bottom: none; }
+
+/* ── Oznake statusa i prioriteta ── */
+.badge-status, .badge-priority {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: .72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.status-novi      { background:#dbeafe; color:#1d4ed8; }
+.status-odobren   { background:#e0f2fe; color:#0369a1; }
+.status-odbijen   { background:#fee2e2; color:#b91c1c; }
+.status-dodjeljen { background:#fef9c3; color:#854d0e; }
+.status-u_toku    { background:#ffedd5; color:#c2410c; }
+.status-rijesen   { background:#dcfce7; color:#15803d; }
+.status-zatvoren  { background:#f1f5f9; color:#475569; }
+
+.priority-niska   { background:#dcfce7; color:#15803d; }
+.priority-srednja { background:#dbeafe; color:#1d4ed8; }
+.priority-visoka  { background:#ffedd5; color:#c2410c; }
+.priority-hitna   { background:#fee2e2; color:#b91c1c; }
+
+/* ── Detalji tiketa ── */
+.ticket-detail-header {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: var(--card-shadow);
+  border: 1px solid #f1f5f9;
+  margin-bottom: 20px;
+}
+.ticket-id-label { font-size: .75rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; }
+.ticket-title-large { font-size: 1.4rem; font-weight: 700; color: #0f172a; margin: 8px 0 12px; }
+
+.comment-item {
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  border-left: 3px solid #e2e8f0;
+}
+.comment-item.internal { border-left-color: #f59e0b; background: #fffbeb; }
+.comment-meta { font-size: .75rem; color: #94a3b8; margin-bottom: 6px; }
+.comment-body { font-size: .875rem; color: #374151; }
+
+.time-entry-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: .875rem;
+}
+.time-hours { font-weight: 700; color: #2563eb; min-width: 50px; }
+
+.status-timeline { list-style: none; padding: 0; margin: 0; position: relative; }
+.status-timeline::before {
+  content: '';
+  position: absolute;
+  left: 14px; top: 0; bottom: 0;
+  width: 2px;
+  background: #e2e8f0;
+}
+.status-timeline li {
+  display: flex;
+  gap: 14px;
+  padding: 0 0 16px 0;
+  position: relative;
+}
+.status-timeline li:last-child { padding-bottom: 0; }
+.timeline-dot {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .75rem;
+  flex-shrink: 0;
+  z-index: 1;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 2px #e2e8f0;
+}
+.timeline-content { flex: 1; padding-top: 4px; }
+.timeline-status { font-size: .8rem; font-weight: 600; color: #1e293b; }
+.timeline-meta   { font-size: .72rem; color: #94a3b8; margin-top: 2px; }
+.timeline-note   { font-size: .8rem; color: #64748b; margin-top: 4px; font-style: italic; }
+
+/* ── Prilozi ── */
+.attachment-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  font-size: .85rem;
+  border: 1px solid #e2e8f0;
+}
+.attachment-item i { font-size: 1.2rem; color: #2563eb; }
+.attachment-item .attach-name { flex: 1; font-weight: 500; color: #374151; }
+.attachment-item .attach-size { color: #94a3b8; font-size: .75rem; }
+
+/* ── Forme ── */
+.form-label { font-size: .82rem; font-weight: 600; color: #374151; margin-bottom: 5px; }
+.form-control, .form-select {
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  font-size: .875rem;
+  transition: border .15s, box-shadow .15s;
+}
+.form-control:focus, .form-select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+}
+
+/* ── Dugmad ── */
+.btn { border-radius: 8px; font-size: .875rem; font-weight: 500; }
+.btn-primary { background: #2563eb; border-color: #2563eb; }
+.btn-primary:hover { background: #1d4ed8; border-color: #1d4ed8; }
+.btn-sm { font-size: .78rem; padding: 4px 12px; }
+
+/* ── Obavijesti ── */
+.notif-item {
+  display: flex;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+  transition: background .12s;
+}
+.notif-item:hover { background: #f8fafc; }
+.notif-item.unread { background: #eff6ff; }
+.notif-item.unread:hover { background: #dbeafe; }
+.notif-icon {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .9rem;
+  flex-shrink: 0;
+}
+.notif-title { font-size: .85rem; font-weight: 600; color: #1e293b; }
+.notif-msg   { font-size: .8rem; color: #64748b; margin-top: 2px; }
+.notif-time  { font-size: .72rem; color: #94a3b8; margin-top: 4px; }
+.notif-dot   { width: 8px; height: 8px; border-radius: 50%; background: #2563eb; flex-shrink: 0; margin-top: 6px; }
+
+/* ── Prazan prikaz ── */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #94a3b8;
+}
+.empty-state i { font-size: 3rem; display: block; margin-bottom: 12px; }
+.empty-state p { font-size: .9rem; }
+
+/* ── Kratke poruke korisniku ── */
+#toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.app-toast {
+  background: #1e293b;
+  color: #fff;
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-size: .875rem;
+  min-width: 280px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.25);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: slideIn .25s ease;
+  border-left: 4px solid #2563eb;
+}
+.app-toast.success { border-left-color: #22c55e; }
+.app-toast.error   { border-left-color: #ef4444; }
+.app-toast.warning { border-left-color: #f59e0b; }
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+/* ── Stranica za prijavu ── */
+#login-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.login-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 40px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.35);
+}
+.login-logo {
+  text-align: center;
+  margin-bottom: 28px;
+}
+.login-logo i { font-size: 2.5rem; color: #2563eb; }
+.login-logo h2 { font-size: 1.5rem; font-weight: 800; color: #0f172a; margin: 6px 0 2px; }
+.login-logo p { font-size: .82rem; color: #64748b; }
+
+.demo-accounts {
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 14px;
+  margin-top: 20px;
+  border: 1px solid #e2e8f0;
+}
+.demo-accounts h6 { font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; color: #64748b; margin-bottom: 10px; }
+.demo-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: .78rem;
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 5px 6px;
+  transition: background .12s;
+}
+.demo-row:hover { background: #e2e8f0; }
+.demo-role { background: #dbeafe; color: #1d4ed8; padding: 1px 7px; border-radius: 10px; font-size: .7rem; font-weight: 600; }
+.demo-creds { color: #64748b; }
+
+/* ── Kartice zgrada ── */
+.building-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #f1f5f9;
+  box-shadow: var(--card-shadow);
+  transition: box-shadow .2s;
+}
+.building-card:hover { box-shadow: var(--card-shadow-hover); }
+.building-card .building-name { font-size: 1rem; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+.building-card .building-addr { font-size: .82rem; color: #64748b; }
+
+/* ── Tabela korisnika ── */
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: .72rem;
+  font-weight: 600;
+}
+.role-administrator { background: #fce7f3; color: #9d174d; }
+.role-povjerenik    { background: #ede9fe; color: #5b21b6; }
+.role-uposlenik     { background: #d1fae5; color: #065f46; }
+.role-stanar        { background: #dbeafe; color: #1d4ed8; }
+
+/* ── Kanban prikaz ── */
+.kanban-col {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 12px;
+  min-height: 200px;
+  border: 1px solid #e2e8f0;
+}
+.kanban-col-title {
+  font-size: .75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #64748b;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.kanban-ticket-card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 8px;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: box-shadow .15s;
+  font-size: .82rem;
+}
+.kanban-ticket-card:hover { box-shadow: var(--card-shadow-hover); }
+.kanban-ticket-title { font-weight: 600; color: #1e293b; margin-bottom: 6px; }
+
+
+/* Tabele često imaju više kolona; na manjim ekranima se zato pomjeraju horizontalno umjesto da lome layout. */
+.app-card .card-body-custom {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Dugmad u headerima ostaju poravnata, ali imaju dozvolu da pređu u drugi red kad nema dovoljno prostora. */
+.card-header-custom, .ticket-detail-header .d-flex {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Dugački naslovi i email adrese se prelamaju, što sprečava horizontalno pucanje layouta. */
+.ticket-title-large, .user-name, .user-link, .text-break-safe {
+  overflow-wrap: anywhere;
+}
+
+/* ── Prilagodba manjim ekranima ── */
+@media (max-width: 991px) {
+  #sidebar { transform: translateX(-100%); }
+  #sidebar.open { transform: translateX(0); }
+  #main-wrapper { margin-left: 0; }
+  #topbar #sidebar-toggle { display: block; }
+  #sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.5);
+    z-index: 1039;
+  }
+  #sidebar-overlay.show { display: block; }
+}
+
+
+@media (max-width: 768px) {
+  #topbar { padding: 0 16px; }
+  #topbar #page-title { font-size: 1rem; }
+  .stat-card { padding: 16px; }
+  .ticket-table thead th, .ticket-table tbody td { padding: 10px 12px; }
+  .app-card .card-header-custom { align-items: flex-start; }
+}
+
+@media (max-width: 576px) {
+  #page-content { padding: 16px; }
+  .ticket-detail-header { padding: 16px; }
+  .login-card { padding: 28px 20px; }
+}
+
+/* Stil scrollbara je diskretan da se uklopi u ostatak interfejsa. */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* Male pomoćne klase koje se koriste kroz više stranica. */
+.page { display: none; }
+.page.active { display: block; }
+.cursor-pointer { cursor: pointer; }
+.fw-600 { font-weight: 600; }
+.text-tiny { font-size: .72rem; }
+.gap-6 { gap: 6px; }

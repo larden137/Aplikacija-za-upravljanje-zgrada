@@ -1,0 +1,17 @@
+{
+  "name": "zgrada-app",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Web aplikacija za upravljanje zahtjevima stanara i održavanjem zgrada",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.38.4"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}
