@@ -21,7 +21,11 @@ const COLLECTION_TO_TABLE = {
   comments: 'comments',
   notifications: 'notifications',
   timeEntries: 'time_entries',
-  attachments: 'attachments'
+  attachments: 'attachments',
+  registrationRequests: 'registration_requests',
+  passwordResetRequests: 'password_reset_requests',
+  userImportBatches: 'user_import_batches',
+  userImportRows: 'user_import_rows'
 };
 
 // Mapiranje camelCase polja iz JavaScript-a na snake_case kolone u bazi.
@@ -41,7 +45,20 @@ const FIELD_TO_DB = {
   fileType: 'file_type',
   fileSize: 'file_size',
   createdAt: 'created_at',
-  updatedAt: 'updated_at'
+  updatedAt: 'updated_at',
+  requestedBy: 'requested_by',
+  requestedAt: 'requested_at',
+  reviewedBy: 'reviewed_by',
+  reviewedAt: 'reviewed_at',
+  newPassword: 'new_password',
+  buildingName: 'building_name',
+  batchId: 'batch_id',
+  povjerenikId: 'povjerenik_id',
+  totalRows: 'total_rows',
+  importedRows: 'imported_rows',
+  errorMessage: 'error_message',
+  sourceFile: 'source_file',
+  rawData: 'raw_data'
 };
 
 // Obrnuto mapiranje se koristi kada podaci dolaze iz Supabase-a nazad u aplikaciju.
@@ -125,7 +142,11 @@ export function getDemoData() {
     comments: [],
     notifications: [],
     timeEntries: [],
-    attachments: []
+    attachments: [],
+    registrationRequests: [],
+    passwordResetRequests: [],
+    userImportBatches: [],
+    userImportRows: []
   };
 }
 

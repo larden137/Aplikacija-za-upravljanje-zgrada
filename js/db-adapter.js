@@ -5,7 +5,10 @@
 import DBAsync, { getDemoData } from './db.js';
 
 // Kolekcije koje aplikacija koristi kroz sve ekrane.
-const CACHE_KEYS = ['users', 'tickets', 'buildings', 'comments', 'notifications', 'timeEntries', 'attachments'];
+const CACHE_KEYS = [
+  'users', 'tickets', 'buildings', 'comments', 'notifications', 'timeEntries', 'attachments',
+  'registrationRequests', 'passwordResetRequests', 'userImportBatches', 'userImportRows'
+];
 // Stari ključ se koristi samo za jednokratnu migraciju podataka iz ranije lokalne verzije.
 const LEGACY_STORAGE_KEY = 'zgrada_app_cache_v3';
 const MIGRATION_FLAG_KEY = 'zgrada_supabase_migration_done_v1';
@@ -62,7 +65,7 @@ async function migrateLegacyLocalStorageToSupabase() {
   if (import.meta.env.DEV) console.info('Pokrenuta je migracija starih lokalnih podataka u Supabase.');
 
   // Redoslijed je bitan zbog foreign key veza.
-  const order = ['users', 'buildings', 'tickets', 'comments', 'notifications', 'timeEntries', 'attachments'];
+  const order = ['users', 'buildings', 'tickets', 'comments', 'notifications', 'timeEntries', 'attachments', 'registrationRequests', 'passwordResetRequests', 'userImportBatches', 'userImportRows'];
   let failed = false;
 
   for (const collection of order) {

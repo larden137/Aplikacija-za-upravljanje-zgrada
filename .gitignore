@@ -4,4 +4,5 @@ dist/
 .vs/
 .claude/
 *.vsidx
+package-lock.json
 .DS_Store

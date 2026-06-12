@@ -9,9 +9,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.38.4"
+    "@supabase/supabase-js": "^2.38.4",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "vite": "^5.0.0"
-  }
+  },
+  "author": "Fejsal Shakur"
 }

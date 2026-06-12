@@ -1,12 +1,26 @@
 # ZgradaApp
 
-Web aplikacija za evidenciju i obradu zahtjeva stanara u zgradama.
+Web aplikacija za evidenciju, obradu i praćenje zahtjeva stanara u zgradama.
+Autor projekta: Fejsal Shakur.
+
+## Funkcionalnosti
+
+- Dashboard sa pregledom tiketa, korisnika, zgrada i zahtjeva koji čekaju obradu.
+- Klikabilne dashboard kartice koje otvaraju filtrirane prikaze i imaju povratak na dashboard.
+- Kreiranje, odobravanje, dodjeljivanje i praćenje tiketa po ulogama.
+- Administracija korisnika i zgrada.
+- Import i export korisnika i zgrada kroz Excel fajlove.
+- Registracija korisnika kroz zahtjev administratoru.
+- Zahtjev za reset lozinke kroz aplikaciju.
+- Povjerenik može uploadovati stanare samo za svoje zgrade, a administrator import odobrava.
+- Responsive interfejs prilagođen desktopu, tabletu i mobilnom prikazu.
 
 ## Tehnologije
 
 - HTML, CSS i JavaScript su odvojeni po fajlovima.
 - Vite se koristi za lokalno pokretanje i produkcijski build.
 - Supabase je glavni izvor podataka.
+- XLSX biblioteka se koristi za Excel import/export.
 - Bootstrap i Bootstrap Icons se koriste za grid, forme, modale i ikonice.
 
 ## Lokalno pokretanje
@@ -33,7 +47,7 @@ U Supabase SQL Editoru pokrenuti:
 supabase/schema.sql
 ```
 
-Fajl kreira tabele, indekse, demo korisnike, demo zgrade i demo tikete.
+Fajl kreira tabele, indekse, demo korisnike, demo zgrade, demo tikete i demo RLS pravila.
 
 ## Demo nalozi
 

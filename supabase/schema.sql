@@ -99,6 +99,68 @@ CREATE TABLE IF NOT EXISTS public.attachments (
   updated_at TIMESTAMPTZ
 );
 
+
+
+CREATE TABLE IF NOT EXISTS public.registration_requests (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  password TEXT NOT NULL,
+  phone TEXT,
+  building_id TEXT REFERENCES public.buildings(id) ON DELETE SET NULL,
+  apartment TEXT,
+  reference TEXT,
+  status TEXT NOT NULL DEFAULT 'na_cekanju',
+  reviewed_by TEXT REFERENCES public.users(id) ON DELETE SET NULL,
+  reviewed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS public.password_reset_requests (
+  id TEXT PRIMARY KEY,
+  user_id TEXT REFERENCES public.users(id) ON DELETE CASCADE,
+  email TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'na_cekanju',
+  new_password TEXT,
+  reviewed_by TEXT REFERENCES public.users(id) ON DELETE SET NULL,
+  reviewed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS public.user_import_batches (
+  id TEXT PRIMARY KEY,
+  povjerenik_id TEXT REFERENCES public.users(id) ON DELETE SET NULL,
+  status TEXT NOT NULL DEFAULT 'na_cekanju',
+  total_rows INTEGER DEFAULT 0,
+  imported_rows INTEGER DEFAULT 0,
+  source_file TEXT,
+  error_message TEXT,
+  reviewed_by TEXT REFERENCES public.users(id) ON DELETE SET NULL,
+  reviewed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS public.user_import_rows (
+  id TEXT PRIMARY KEY,
+  batch_id TEXT REFERENCES public.user_import_batches(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  phone TEXT,
+  role TEXT DEFAULT 'stanar',
+  building_id TEXT REFERENCES public.buildings(id) ON DELETE SET NULL,
+  apartment TEXT,
+  reference TEXT,
+  position TEXT,
+  password TEXT,
+  status TEXT NOT NULL DEFAULT 'na_cekanju',
+  raw_data JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ
+);
+
 CREATE INDEX IF NOT EXISTS idx_users_email ON public.users(email);
 CREATE INDEX IF NOT EXISTS idx_tickets_building_id ON public.tickets(building_id);
 CREATE INDEX IF NOT EXISTS idx_tickets_stanar_id ON public.tickets(stanar_id);
@@ -107,16 +169,25 @@ CREATE INDEX IF NOT EXISTS idx_comments_ticket_id ON public.comments(ticket_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON public.notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_time_entries_ticket_id ON public.time_entries(ticket_id);
 CREATE INDEX IF NOT EXISTS idx_attachments_ticket_id ON public.attachments(ticket_id);
+CREATE INDEX IF NOT EXISTS idx_registration_requests_status ON public.registration_requests(status);
+CREATE INDEX IF NOT EXISTS idx_password_reset_requests_status ON public.password_reset_requests(status);
+CREATE INDEX IF NOT EXISTS idx_user_import_batches_status ON public.user_import_batches(status);
+CREATE INDEX IF NOT EXISTS idx_user_import_rows_batch_id ON public.user_import_rows(batch_id);
 
--- Demo/fakultetska verzija: frontend koristi anon/publishable ključ za čitanje i upis.
--- Za stvarnu produkciju ovdje uključiti RLS i napisati policy-je vezane za Supabase Auth korisnika.
-ALTER TABLE public.users DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.buildings DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.tickets DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.comments DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.notifications DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.time_entries DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.attachments DISABLE ROW LEVEL SECURITY;
+-- RLS je uključen kako bi se u projektu vidjelo da su sigurnosna pravila dio dizajna baze.
+-- Pošto ova akademska verzija ne koristi Supabase Auth, policy-ji su demo/permisivni za anon i authenticated role.
+-- U produkciji bi se pravila vezala za auth.uid() i ulogu stvarnog prijavljenog korisnika.
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.buildings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tickets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.time_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.attachments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.registration_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.password_reset_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_import_batches ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_import_rows ENABLE ROW LEVEL SECURITY;
 
 GRANT USAGE ON SCHEMA public TO anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.users TO anon, authenticated;
@@ -126,6 +197,34 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.comments TO anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.notifications TO anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.time_entries TO anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.attachments TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.registration_requests TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.password_reset_requests TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.user_import_batches TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.user_import_rows TO anon, authenticated;
+
+DO $$
+DECLARE tbl text;
+BEGIN
+  FOREACH tbl IN ARRAY ARRAY['users','buildings','tickets','comments','notifications','time_entries','attachments','registration_requests','password_reset_requests','user_import_batches','user_import_rows'] LOOP
+    EXECUTE format('DROP POLICY IF EXISTS demo_select_%s ON public.%I', tbl, tbl);
+    EXECUTE format('DROP POLICY IF EXISTS demo_insert_%s ON public.%I', tbl, tbl);
+    EXECUTE format('DROP POLICY IF EXISTS demo_update_%s ON public.%I', tbl, tbl);
+    EXECUTE format('DROP POLICY IF EXISTS demo_delete_%s ON public.%I', tbl, tbl);
+    EXECUTE format('CREATE POLICY demo_select_%s ON public.%I FOR SELECT TO anon, authenticated USING (true)', tbl, tbl);
+    EXECUTE format('CREATE POLICY demo_insert_%s ON public.%I FOR INSERT TO anon, authenticated WITH CHECK (true)', tbl, tbl);
+    EXECUTE format('CREATE POLICY demo_update_%s ON public.%I FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true)', tbl, tbl);
+    EXECUTE format('CREATE POLICY demo_delete_%s ON public.%I FOR DELETE TO anon, authenticated USING (true)', tbl, tbl);
+  END LOOP;
+END $$;
+
+
+-- Sigurnosni ALTER izrazi omogućavaju da se fajl pokrene i nad već postojećom bazom.
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS phone TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS position TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS reference TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS building_ids TEXT[] DEFAULT '{}';
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ;
+ALTER TABLE public.buildings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ;
 
 -- Demo korisnici. ON CONFLICT čuva postojeće ID-jeve i ažurira demo podatke ako ih ponovo pokreneš.
 INSERT INTO public.users (id, name, email, password, role, building_id, building_ids, apartment, active, reference, hire_year, position, bio, phone, created_at)

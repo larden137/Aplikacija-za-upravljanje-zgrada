@@ -3,6 +3,7 @@
 
 import DB from './db-adapter.js';
 import Auth from './auth.js';
+import * as XLSX from 'xlsx';
 
 const App = {
   currentPage: null,
@@ -627,7 +628,8 @@ const App = {
   _notifIcon(type) {
     return {
       status_changed:'bi-arrow-left-right', ticket_assigned:'bi-person-check',
-      new_ticket:'bi-ticket-detailed', comment:'bi-chat-text'
+      new_ticket:'bi-ticket-detailed', comment:'bi-chat-text',
+      registration_request:'bi-person-plus', password_reset:'bi-key', user_import:'bi-file-earmark-spreadsheet'
     }[type] || 'bi-bell';
   },
 
@@ -2028,6 +2030,709 @@ const App = {
               </table>`}
         </div>
       </div>`;
+  },
+
+
+  // ── DORAĐENE FUNKCIONALNOSTI ZA FAKULTETSKI PROJEKAT ───────────────────
+
+  // Centralna lista statičkih filtera koje dashboard kartice koriste.
+  // Svaki klik sa dashboarda vodi na standardnu tabelu, ali sa jasno označenim kriterijem i dugmetom za povratak.
+  _dashboardTicketSet(type) {
+    const u = Auth.currentUser;
+    let tickets = DB.findAll('tickets');
+    if (u.role === 'stanar') tickets = tickets.filter(t => t.stanarId === u.id);
+    if (u.role === 'povjerenik') tickets = tickets.filter(t => (u.buildingIds || []).includes(t.buildingId));
+    if (u.role === 'uposlenik') tickets = tickets.filter(t => t.assignedTo === u.id);
+
+    const labels = {
+      allTickets: 'Svi tiketi', pending: 'Tiketi na čekanju', closed: 'Riješeni tiketi',
+      active: 'Tiketi u toku', assigned: 'Dodijeljeni tiketi', rejected: 'Odbijeni tiketi'
+    };
+    if (type === 'pending') tickets = tickets.filter(t => t.status === 'novi');
+    if (type === 'closed') tickets = tickets.filter(t => ['rijesen', 'zatvoren'].includes(t.status));
+    if (type === 'active') tickets = tickets.filter(t => ['odobren', 'dodjeljen', 'u_toku'].includes(t.status));
+    if (type === 'assigned') tickets = tickets.filter(t => t.status === 'dodjeljen');
+    if (type === 'rejected') tickets = tickets.filter(t => t.status === 'odbijen');
+    return { title: labels[type] || 'Tiketi', rows: tickets.slice().reverse() };
+  },
+
+  // Dashboard kartice pozivaju ovu metodu kako bi korisnik dobio pregled podataka bez ručnog podešavanja filtera.
+  openDashboardTickets(type) {
+    const result = this._dashboardTicketSet(type);
+    this.navigate('tickets', { fromDashboard: true, dashboardTitle: result.title, dashboardRows: result.rows });
+  },
+
+  // Koristi se za kartice korisnika i zgrada; otvara standardni modul i prikazuje dugme za povratak.
+  openDashboardModule(page, filter = null) {
+    this.navigate(page, { fromDashboard: true, dashboardFilter: filter });
+  },
+
+  // Stara metoda je ostavljena kao javni alias jer je već pozivaju neke postojeće kartice u kodu.
+  _filterDashboardData(type) {
+    if (type === 'unread') {
+      this.navigate('notifications', { fromDashboard: true, unreadOnly: true });
+      return;
+    }
+    this.openDashboardTickets(type);
+  },
+
+  // Meni je proširen modulom za administratorske zahtjeve, a povjerenik dobija pregled stanara i import za svoje zgrade.
+  _getNavItems() {
+    const role = Auth.currentUser?.role;
+    if (!role) return [];
+    const base = [{ id:'dashboard', icon:'bi-speedometer2', label:'Dashboard' }];
+    if (role === 'stanar') return [...base,
+      { divider:true, label:'Tiketi' },
+      { id:'tickets', icon:'bi-ticket-detailed', label:'Moji Tiketi' },
+      { id:'new-ticket', icon:'bi-plus-circle', label:'Novi Zahtjev' },
+      { divider:true, label:'Ostalo' },
+      { id:'notifications', icon:'bi-bell', label:'Obavijesti', badge:true }
+    ];
+    if (role === 'povjerenik') return [...base,
+      { divider:true, label:'Tiketi' },
+      { id:'tickets', icon:'bi-ticket-detailed', label:'Tiketi Zgrade', badge:true },
+      { divider:true, label:'Upravljanje' },
+      { id:'buildings', icon:'bi-buildings', label:'Moje Zgrade' },
+      { id:'users', icon:'bi-people', label:'Stanari i import' },
+      { id:'notifications', icon:'bi-bell', label:'Obavijesti', badge:true }
+    ];
+    if (role === 'uposlenik') return [...base,
+      { divider:true, label:'Zadaci' },
+      { id:'tickets', icon:'bi-ticket-detailed', label:'Moji Zadaci' },
+      { id:'notifications', icon:'bi-bell', label:'Obavijesti', badge:true }
+    ];
+    return [...base,
+      { divider:true, label:'Tiketi' },
+      { id:'tickets', icon:'bi-ticket-detailed', label:'Svi Tiketi' },
+      { id:'new-ticket', icon:'bi-plus-circle', label:'Novi Tiket' },
+      { divider:true, label:'Upravljanje' },
+      { id:'buildings', icon:'bi-buildings', label:'Zgrade' },
+      { id:'users', icon:'bi-people', label:'Korisnici' },
+      { id:'admin-requests', icon:'bi-inboxes', label:'Zahtjevi', badge:true },
+      { id:'notifications', icon:'bi-bell', label:'Obavijesti', badge:true }
+    ];
+  },
+
+  // Router je proširen za stranicu administratorskih zahtjeva i za dashboard parametre.
+  navigate(page, params = {}) {
+    this.currentPage = page;
+    this.currentParams = params;
+    this.setActiveNav(page);
+
+    const titles = {
+      dashboard: 'Dashboard', tickets: 'Tiketi', 'new-ticket': 'Novi Tiket',
+      'ticket-detail': 'Detalji Tiketa', buildings: 'Zgrade', users: 'Korisnici',
+      notifications: 'Obavijesti', 'user-profile': 'Profil Korisnika', 'admin-requests': 'Zahtjevi'
+    };
+    document.getElementById('page-title').textContent = titles[page] || page;
+
+    document.querySelectorAll('.page').forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
+    const pageEl = document.getElementById(`page-${page}`);
+    if (pageEl) { pageEl.classList.add('active'); pageEl.style.display = 'block'; }
+
+    const renders = {
+      dashboard: () => this.renderDashboard(),
+      tickets: () => this.renderTickets(),
+      'new-ticket': () => this.renderNewTicket(),
+      'ticket-detail': () => this.renderTicketDetail(params.id),
+      buildings: () => this.renderBuildings(),
+      users: () => this.renderUsers(),
+      notifications: () => this.renderNotifications(),
+      'user-profile': () => this.renderUserProfile(params.id),
+      'admin-requests': () => this.renderAdminRequests()
+    };
+    renders[page]?.();
+    this.closeSidebar();
+  },
+
+  // Administratorski dashboard je vizuelno proširen tako da velike rezolucije ne ostaju prazne.
+  _adminDashboard() {
+    const tickets = DB.findAll('tickets');
+    const users = DB.findAll('users');
+    const buildings = DB.findAll('buildings');
+    const pendingRequests = this._pendingAdminWorkCount();
+    const byStatus = (s) => tickets.filter(t => t.status === s).length;
+    const activeStatuses = ['odobren', 'dodjeljen', 'u_toku'];
+    const activeTickets = tickets.filter(t => activeStatuses.includes(t.status));
+    const latestUsers = users.slice().reverse().slice(0, 5);
+
+    return `
+      <div class="dashboard-hero mb-4">
+        <div>
+          <p class="eyebrow">Pregled sistema</p>
+          <h2>Upravljanje zgradama i zahtjevima stanara</h2>
+          <p>Jedan pregled za tikete, zgrade, korisnike, zahtjeve za naloge i operativne obavijesti.</p>
+        </div>
+        <div class="hero-actions">
+          <button class="btn btn-light" onclick="App.navigate('new-ticket')"><i class="bi bi-plus-circle me-1"></i>Novi tiket</button>
+          <button class="btn btn-outline-light" onclick="App.navigate('admin-requests')"><i class="bi bi-inboxes me-1"></i>Zahtjevi (${pendingRequests})</button>
+        </div>
+      </div>
+      <div class="row g-3 mb-4 dashboard-grid-fill">
+        ${this._statCard('bi-ticket-detailed','Ukupno tiketa', tickets.length, '#dbeafe','#2563eb', "App.openDashboardTickets('allTickets')")}
+        ${this._statCard('bi-people','Korisnici', users.length, '#ede9fe','#5b21b6', "App.openDashboardModule('users')")}
+        ${this._statCard('bi-buildings','Zgrade', buildings.length, '#d1fae5','#065f46', "App.openDashboardModule('buildings')")}
+        ${this._statCard('bi-exclamation-triangle','Na čekanju', byStatus('novi'), '#fef9c3','#854d0e', "App.openDashboardTickets('pending')")}
+        ${this._statCard('bi-check-circle','Riješeni', byStatus('rijesen')+byStatus('zatvoren'), '#dcfce7','#15803d', "App.openDashboardTickets('closed')")}
+        ${this._statCard('bi-arrow-repeat','U toku', byStatus('u_toku'), '#ffedd5','#c2410c', "App.openDashboardTickets('active')")}
+        ${this._statCard('bi-person-check','Dodijeljeni', byStatus('dodjeljen'), '#fce7f3','#be185d', "App.openDashboardTickets('assigned')")}
+        ${this._statCard('bi-x-circle','Odbijeni', byStatus('odbijen'), '#f1f5f9','#475569', "App.openDashboardTickets('rejected')")}
+      </div>
+      <div class="row g-3 dashboard-main-grid">
+        <div class="col-xl-8">
+          <div class="app-card h-100">
+            <div class="card-header-custom"><h6><i class="bi bi-bar-chart me-2"></i>Tiketi po statusu</h6></div>
+            <div class="p-3 chart-tall"><canvas id="status-chart" height="170"></canvas></div>
+          </div>
+        </div>
+        <div class="col-xl-4">
+          <div class="app-card h-100">
+            <div class="card-header-custom"><h6><i class="bi bi-lightning me-2"></i>Operativni fokus</h6></div>
+            <div class="p-3">
+              <div class="focus-row"><span>Aktivni tiketi</span><strong>${activeTickets.length}</strong></div>
+              <div class="focus-row"><span>Novi zahtjevi</span><strong>${byStatus('novi')}</strong></div>
+              <div class="focus-row"><span>Administratorski zahtjevi</span><strong>${pendingRequests}</strong></div>
+              <div class="d-grid gap-2 mt-3">
+                <button class="btn btn-primary btn-sm" onclick="App.navigate('admin-requests')">Pregled zahtjeva</button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="App.exportUsersToExcel()">Export korisnika</button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="App.exportBuildingsToExcel()">Export zgrada</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-xl-8">
+          <div class="app-card">
+            <div class="card-header-custom"><h6><i class="bi bi-ticket-detailed me-2"></i>Najnoviji tiketi</h6><button class="btn btn-sm btn-outline-secondary" onclick="App.openDashboardTickets('allTickets')">Vidi sve</button></div>
+            <div class="card-body-custom">${this._ticketsTable(tickets.slice().reverse().slice(0, 8))}</div>
+          </div>
+        </div>
+        <div class="col-xl-4">
+          <div class="app-card">
+            <div class="card-header-custom"><h6><i class="bi bi-person-lines-fill me-2"></i>Zadnji korisnici</h6><button class="btn btn-sm btn-outline-secondary" onclick="App.openDashboardModule('users')">Svi korisnici</button></div>
+            <div class="p-3">${latestUsers.map(user => this._compactUserLine(user)).join('')}</div>
+          </div>
+        </div>
+      </div>`;
+  },
+
+  // Statistička kartica je široka na velikim ekranima, ali se uredno slaže na tabletu i telefonu.
+  _statCard(icon, label, value, bgColor, iconColor, onclick) {
+    return `<div class="col-12 col-sm-6 col-xl-3">
+      <div class="stat-card stat-card-clickable" ${onclick ? `onclick="${onclick}"` : ''}>
+        <div class="stat-icon" style="background:${bgColor}"><i class="bi ${icon}" style="color:${iconColor}"></i></div>
+        <div class="stat-value">${value}</div>
+        <div class="stat-label">${label}</div>
+      </div>
+    </div>`;
+  },
+
+  // Sažet prikaz korisnika za dashboard i male bočne liste.
+  _compactUserLine(user) {
+    const initials = (user.name || '?').split(' ').map(n => n[0]).join('').substr(0,2).toUpperCase();
+    return `<div class="mini-list-row" onclick="App.navigate('user-profile',{id:'${user.id}'})">
+      <div class="avatar avatar-${user.id}">${initials}</div>
+      <div><div class="fw-600">${this.esc(user.name)}</div><div class="text-tiny text-secondary">${this.ROLES[user.role] || user.role}</div></div>
+    </div>`;
+  },
+
+  // Lista tiketa može prikazati normalni pregled ili rezultat dashboard kartice sa dugmetom za povratak.
+  renderTickets() {
+    const u = Auth.currentUser;
+    let tickets = Array.isArray(this.currentParams.dashboardRows) ? this.currentParams.dashboardRows : DB.findAll('tickets');
+    if (!this.currentParams.dashboardRows) {
+      if (u.role === 'stanar') tickets = tickets.filter(t => t.stanarId === u.id);
+      if (u.role === 'povjerenik') tickets = tickets.filter(t => (u.buildingIds || []).includes(t.buildingId));
+      if (u.role === 'uposlenik') tickets = tickets.filter(t => t.assignedTo === u.id);
+      tickets = tickets.slice().reverse();
+    }
+    const title = this.currentParams.dashboardTitle || 'Pregled tiketa';
+    const el = document.getElementById('page-tickets');
+    el.innerHTML = `
+      ${this.currentParams.fromDashboard ? this._backToDashboardBar(title) : ''}
+      <div class="toolbar-card mb-3">
+        <div class="toolbar-left">
+          <select class="form-select form-select-sm" id="filter-status" onchange="App.filterTickets()"><option value="">Svi statusi</option>${Object.entries(this.STATUS_LABELS).map(([k,v]) => `<option value="${k}">${v}</option>`).join('')}</select>
+          <select class="form-select form-select-sm" id="filter-priority" onchange="App.filterTickets()"><option value="">Svi prioriteti</option>${Object.entries(this.PRIORITIES).map(([k,v]) => `<option value="${k}">${v}</option>`).join('')}</select>
+          ${u.role !== 'stanar' ? `<select class="form-select form-select-sm" id="filter-building" onchange="App.filterTickets()"><option value="">Sve zgrade</option>${DB.findAll('buildings').map(b => `<option value="${b.id}">${this.esc(b.name)}</option>`).join('')}</select>` : ''}
+          <input type="text" class="form-control form-control-sm" id="filter-search" placeholder="Pretraži..." oninput="App.filterTickets()">
+        </div>
+        ${(u.role === 'stanar' || u.role === 'administrator') ? `<button class="btn btn-primary btn-sm" onclick="App.navigate('new-ticket')"><i class="bi bi-plus me-1"></i>Novi Tiket</button>` : ''}
+      </div>
+      <div class="app-card page-fill"><div class="card-body-custom" id="tickets-table-wrap">${this._ticketsTable(tickets)}</div></div>`;
+  },
+
+  // Pregled zgrada dobija export/import alate za administratora i puniji grid na velikim ekranima.
+  renderBuildings() {
+    const u = Auth.currentUser;
+    const isAdmin = u.role === 'administrator';
+    let buildings = DB.findAll('buildings');
+    if (u.role === 'povjerenik') buildings = buildings.filter(b => (u.buildingIds || []).includes(b.id));
+    const el = document.getElementById('page-buildings');
+    el.innerHTML = `
+      ${this.currentParams.fromDashboard ? this._backToDashboardBar('Zgrade') : ''}
+      <div class="toolbar-card mb-3">
+        <div class="toolbar-left"><input class="form-control form-control-sm" id="building-search" placeholder="Pretraži zgrade..." oninput="App.filterBuildings()"></div>
+        <div class="toolbar-right">
+          ${isAdmin ? `<button class="btn btn-outline-secondary btn-sm" onclick="App.downloadBuildingTemplate()"><i class="bi bi-download me-1"></i>Template</button>
+          <label class="btn btn-outline-secondary btn-sm mb-0"><i class="bi bi-upload me-1"></i>Import<input type="file" class="d-none" accept=".xlsx,.xls" onchange="App.importBuildingsFromExcel(this)"></label>
+          <button class="btn btn-outline-secondary btn-sm" onclick="App.exportBuildingsToExcel()"><i class="bi bi-file-earmark-excel me-1"></i>Export</button>
+          <button class="btn btn-primary btn-sm" onclick="App.openBuildingModal()"><i class="bi bi-plus me-1"></i>Nova Zgrada</button>` : ''}
+        </div>
+      </div>
+      <div class="row g-3 buildings-grid-wide" id="buildings-grid">${buildings.map(b => this._buildingCard(b)).join('')}</div>
+      ${isAdmin ? this._buildingModal() : ''}`;
+  },
+
+  // Pretraga zgrada radi bez novog poziva bazi jer su podaci već u memorijskom cache-u.
+  filterBuildings() {
+    const q = (document.getElementById('building-search')?.value || '').toLowerCase();
+    let buildings = DB.findAll('buildings');
+    const u = Auth.currentUser;
+    if (u.role === 'povjerenik') buildings = buildings.filter(b => (u.buildingIds || []).includes(b.id));
+    if (q) buildings = buildings.filter(b => `${b.name} ${b.address} ${b.city}`.toLowerCase().includes(q));
+    document.getElementById('buildings-grid').innerHTML = buildings.map(b => this._buildingCard(b)).join('');
+  },
+
+  // Prikaz korisnika se prilagođava ulozi: administrator vidi sve, povjerenik samo stanare svojih zgrada.
+  renderUsers() {
+    const u = Auth.currentUser;
+    const isAdmin = u.role === 'administrator';
+    const isPovjerenik = u.role === 'povjerenik';
+    let users = DB.findAll('users');
+    if (isPovjerenik) users = users.filter(item => item.role === 'stanar' && (u.buildingIds || []).includes(item.buildingId));
+    const el = document.getElementById('page-users');
+    el.innerHTML = `
+      ${this.currentParams.fromDashboard ? this._backToDashboardBar(isAdmin ? 'Korisnici' : 'Stanari') : ''}
+      <div class="toolbar-card mb-3">
+        <div class="toolbar-left">
+          <input type="text" class="form-control form-control-sm" id="user-search" placeholder="Pretraži korisnike..." oninput="App.filterUsers()">
+          ${isAdmin ? `<select class="form-select form-select-sm" id="user-role-filter" onchange="App.filterUsers()"><option value="">Sve uloge</option>${Object.entries(this.ROLES).map(([k,v]) => `<option value="${k}">${v}</option>`).join('')}</select>` : `<input type="hidden" id="user-role-filter" value="stanar">`}
+        </div>
+        <div class="toolbar-right">
+          <button class="btn btn-outline-secondary btn-sm" onclick="App.downloadUserTemplate()"><i class="bi bi-download me-1"></i>Template</button>
+          <label class="btn btn-outline-secondary btn-sm mb-0"><i class="bi bi-upload me-1"></i>${isPovjerenik ? 'Upload stanara' : 'Import'}<input type="file" class="d-none" accept=".xlsx,.xls" onchange="App.importUsersFromExcel(this)"></label>
+          <button class="btn btn-outline-secondary btn-sm" onclick="App.exportUsersToExcel()"><i class="bi bi-file-earmark-excel me-1"></i>Export</button>
+          ${isAdmin ? `<button class="btn btn-primary btn-sm" onclick="App.openUserModal()"><i class="bi bi-person-plus me-1"></i>Novi Korisnik</button>` : ''}
+        </div>
+      </div>
+      ${isPovjerenik ? `<div class="alert alert-info small">Povjerenik može preuzeti template i uploadovati stanare samo za zgrade koje su mu dodijeljene. Upload ide administratoru na odobrenje.</div>` : ''}
+      <div class="app-card page-fill"><div class="card-body-custom" id="users-table-wrap">${this._usersTable(users)}</div></div>
+      ${isAdmin ? this._userModal() : ''}`;
+  },
+
+  // Tabela korisnika sadrži dodatne kolone tražene u specifikaciji: poziciju, referencu, zgradu i status.
+  _usersTable(users) {
+    if (!users.length) return `<div class="empty-state"><i class="bi bi-people"></i><p>Nema korisnika.</p></div>`;
+    return `<table class="ticket-table wide-table"><thead><tr><th>Korisnik</th><th>Email</th><th>Uloga</th><th>Pozicija</th><th>Referenca</th><th>Zgrada / Stan</th><th>Status</th><th>Akcije</th></tr></thead><tbody>
+      ${users.map(user => {
+        const initials = (user.name || '?').split(' ').map(n=>n[0]).join('').substr(0,2).toUpperCase();
+        const building = user.buildingId ? DB.findById('buildings', user.buildingId) : null;
+        const buildingNames = user.buildingIds?.length ? user.buildingIds.map(bid => DB.findById('buildings', bid)?.name || '?').join(', ') : '';
+        return `<tr onclick="App.navigate('user-profile',{id:'${user.id}'})" style="cursor:pointer">
+          <td><div class="d-flex align-items-center gap-2"><div class="avatar avatar-${user.id}">${initials}</div><div><div class="fw-600">${this.esc(user.name)}</div><div class="text-tiny text-secondary">${this.esc(user.phone || '')}</div></div></div></td>
+          <td class="text-tiny">${this.esc(user.email)}</td>
+          <td><span class="role-badge role-${user.role}">${this.ROLES[user.role] || user.role}</span></td>
+          <td class="text-tiny">${user.role === 'uposlenik' ? this.esc(user.position || '—') : '—'}</td>
+          <td class="text-tiny">${user.role === 'stanar' ? this.esc(user.reference || '—') : this.esc(user.reference || '—')}</td>
+          <td class="text-tiny">${building ? this.esc(building.name) : (buildingNames || '—')}${user.apartment ? `<br><span class="text-secondary">${this.esc(user.apartment)}</span>` : ''}</td>
+          <td><span class="badge ${user.active ? 'bg-success' : 'bg-secondary'}">${user.active ? 'Aktivan' : 'Neaktivan'}</span></td>
+          <td onclick="event.stopPropagation()"><div class="d-flex gap-1">${Auth.is('administrator') ? `<button class="btn btn-sm btn-outline-secondary" onclick="App.openUserModal('${user.id}')"><i class="bi bi-pencil"></i></button><button class="btn btn-sm btn-outline-${user.active?'danger':'success'}" onclick="App.toggleUser('${user.id}')"><i class="bi bi-${user.active?'person-x':'person-check'}"></i></button>` : '<span class="text-secondary text-tiny">Pregled</span>'}</div></td>
+        </tr>`;
+      }).join('')}
+    </tbody></table>`;
+  },
+
+  // Filtrira korisnike prema tekstu i ulozi, uz ograničenje da povjerenik vidi samo svoje stanare.
+  filterUsers() {
+    const search = (document.getElementById('user-search')?.value || '').toLowerCase();
+    const role = document.getElementById('user-role-filter')?.value || '';
+    const current = Auth.currentUser;
+    let users = DB.findAll('users');
+    if (current.role === 'povjerenik') users = users.filter(user => user.role === 'stanar' && (current.buildingIds || []).includes(user.buildingId));
+    if (search) users = users.filter(user => `${user.name} ${user.email} ${user.reference || ''} ${user.phone || ''}`.toLowerCase().includes(search));
+    if (role) users = users.filter(user => user.role === role);
+    document.getElementById('users-table-wrap').innerHTML = this._usersTable(users);
+  },
+
+  // Modal korisnika je proširen poljima za poziciju, referencu i status naloga.
+  _userModal() {
+    const buildings = DB.findAll('buildings');
+    return `<div class="modal fade" id="userModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content border-0 rounded-3">
+      <div class="modal-header border-0 pb-0"><h5 class="modal-title" id="userModalTitle">Novi Korisnik</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body"><input type="hidden" id="um-id"><div class="row g-3">
+        <div class="col-md-6"><label class="form-label">Ime i prezime *</label><input type="text" class="form-control" id="um-name" required></div>
+        <div class="col-md-6"><label class="form-label">Email *</label><input type="email" class="form-control" id="um-email" required></div>
+        <div class="col-md-6"><label class="form-label">Lozinka</label><input type="password" class="form-control" id="um-pass" placeholder="Ostavite prazno ako se ne mijenja"></div>
+        <div class="col-md-6"><label class="form-label">Telefon</label><input type="text" class="form-control" id="um-phone"></div>
+        <div class="col-md-6"><label class="form-label">Uloga *</label><select class="form-select" id="um-role" required onchange="App.userModalRoleChange()">${Object.entries(this.ROLES).map(([k,v]) => `<option value="${k}">${v}</option>`).join('')}</select></div>
+        <div class="col-md-6"><label class="form-label">Status</label><select class="form-select" id="um-active"><option value="true">Aktivan</option><option value="false">Neaktivan</option></select></div>
+        <div class="col-md-6" id="um-building-wrap"><label class="form-label">Zgrada</label><select class="form-select" id="um-building"><option value="">-- Nema --</option>${buildings.map(b => `<option value="${b.id}">${this.esc(b.name)}</option>`).join('')}</select></div>
+        <div class="col-md-6" id="um-apartment-wrap"><label class="form-label">Stan / Broj stana</label><input type="text" class="form-control" id="um-apartment" placeholder="npr. Stan 12"></div>
+        <div class="col-md-6" id="um-reference-wrap"><label class="form-label">Referenca</label><input type="text" class="form-control" id="um-reference" placeholder="Referenca sa računa / interna oznaka"></div>
+        <div class="col-md-6" id="um-position-wrap"><label class="form-label">Pozicija</label><input type="text" class="form-control" id="um-position" placeholder="npr. Tehničar elektroinstalacija"></div>
+      </div></div>
+      <div class="modal-footer border-0 pt-0"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Odustani</button><button type="button" class="btn btn-primary" onclick="App.saveUser()">Sačuvaj</button></div>
+    </div></div></div>`;
+  },
+
+  // Otvara modal i popunjava ga postojećim podacima kada se uređuje korisnik.
+  openUserModal(id) {
+    const user = id ? DB.findById('users', id) : null;
+    document.getElementById('userModalTitle').textContent = user ? 'Uredi Korisnika' : 'Novi Korisnik';
+    document.getElementById('um-id').value = user?.id || '';
+    document.getElementById('um-name').value = user?.name || '';
+    document.getElementById('um-email').value = user?.email || '';
+    document.getElementById('um-phone').value = user?.phone || '';
+    document.getElementById('um-role').value = user?.role || 'stanar';
+    document.getElementById('um-active').value = String(user?.active ?? true);
+    document.getElementById('um-building').value = user?.buildingId || '';
+    document.getElementById('um-apartment').value = user?.apartment || '';
+    document.getElementById('um-reference').value = user?.reference || '';
+    document.getElementById('um-position').value = user?.position || '';
+    document.getElementById('um-pass').value = '';
+    new bootstrap.Modal(document.getElementById('userModal')).show();
+    this.userModalRoleChange();
+  },
+
+  // Polja se prikazuju prema ulozi da forma ostane jasna i bez viška informacija.
+  userModalRoleChange() {
+    const role = document.getElementById('um-role')?.value;
+    const showStanar = role === 'stanar';
+    const showEmployee = role === 'uposlenik';
+    ['um-building-wrap', 'um-apartment-wrap', 'um-reference-wrap'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = showStanar ? '' : (id === 'um-reference-wrap' && role !== 'stanar' ? '' : 'none'); });
+    const pos = document.getElementById('um-position-wrap');
+    if (pos) pos.style.display = showEmployee ? '' : 'none';
+  },
+
+  // Spremanje korisnika radi osnovne provjere duplikata po emailu i referenci stanara.
+  saveUser() {
+    const id = document.getElementById('um-id').value;
+    const name = document.getElementById('um-name').value.trim();
+    const email = document.getElementById('um-email').value.trim().toLowerCase();
+    const pass = document.getElementById('um-pass').value;
+    const phone = document.getElementById('um-phone').value.trim();
+    const role = document.getElementById('um-role').value;
+    const active = document.getElementById('um-active').value === 'true';
+    const buildingId = document.getElementById('um-building')?.value || null;
+    const apartment = document.getElementById('um-apartment')?.value.trim() || null;
+    const reference = document.getElementById('um-reference')?.value.trim() || null;
+    const position = document.getElementById('um-position')?.value.trim() || null;
+    if (!name || !email || !role) { this.toast('Popunite obavezna polja.', 'warning'); return; }
+    if (DB.findOne('users', user => user.email?.toLowerCase() === email && user.id !== id)) { this.toast('Korisnik s tim emailom već postoji.', 'error'); return; }
+    if (role === 'stanar' && reference && DB.findOne('users', user => user.reference === reference && user.id !== id)) { this.toast('Stanar sa tom referencom već postoji.', 'error'); return; }
+    if (id) {
+      const updates = { name, email, phone, role, buildingId: role === 'stanar' ? buildingId : null, apartment: role === 'stanar' ? apartment : null, reference, position: role === 'uposlenik' ? position : null, active };
+      if (pass) updates.password = pass;
+      DB.update('users', id, updates);
+      this.toast('Korisnik je ažuriran.', 'success');
+    } else {
+      if (!pass) { this.toast('Unesite lozinku za novog korisnika.', 'warning'); return; }
+      DB.insert('users', { name, email, password: pass, phone, role, buildingId: role === 'stanar' ? buildingId : null, buildingIds: [], apartment: role === 'stanar' ? apartment : null, reference, position: role === 'uposlenik' ? position : null, active });
+      this.toast('Korisnik je kreiran.', 'success');
+    }
+    bootstrap.Modal.getInstance(document.getElementById('userModal'))?.hide();
+    this.renderUsers();
+  },
+
+  // Otvara modal registracije i puni listu zgrada iz Supabase-a.
+  openSignupModal() {
+    const select = document.getElementById('su-building');
+    if (select) select.innerHTML = '<option value="">Odaberite zgradu</option>' + DB.findAll('buildings').map(b => `<option value="${b.id}">${this.esc(b.name)} - ${this.esc(b.address)}</option>`).join('');
+    new bootstrap.Modal(document.getElementById('signupModal')).show();
+  },
+
+  // Registracija ne kreira nalog odmah; zapis ide u tabelu zahtjeva i čeka administratora.
+  submitSignupRequest(event) {
+    event.preventDefault();
+    const data = {
+      name: document.getElementById('su-name').value.trim(),
+      email: document.getElementById('su-email').value.trim().toLowerCase(),
+      phone: document.getElementById('su-phone').value.trim(),
+      password: document.getElementById('su-password').value,
+      buildingId: document.getElementById('su-building').value,
+      reference: document.getElementById('su-reference').value.trim(),
+      apartment: document.getElementById('su-apartment').value.trim(),
+      status: 'na_cekanju'
+    };
+    if (DB.findOne('users', u => u.email?.toLowerCase() === data.email) || DB.findOne('registrationRequests', r => r.email?.toLowerCase() === data.email && r.status === 'na_cekanju')) {
+      this.toast('Za ovaj email već postoji nalog ili aktivan zahtjev.', 'warning'); return;
+    }
+    DB.insert('registrationRequests', data);
+    DB.find('users', u => u.role === 'administrator').forEach(admin => this._notify(admin.id, 'registration_request', 'Novi zahtjev za registraciju', `${data.name} je poslao/la zahtjev za nalog.`, null));
+    bootstrap.Modal.getInstance(document.getElementById('signupModal'))?.hide();
+    document.getElementById('signup-form').reset();
+    this.toast('Zahtjev je poslan administratoru.', 'success');
+  },
+
+  // Otvara modal za reset lozinke.
+  openPasswordResetModal() {
+    new bootstrap.Modal(document.getElementById('passwordResetModal')).show();
+  },
+
+  // Zahtjev za reset lozinke se evidentira u aplikaciji umjesto slanja pravog emaila.
+  submitPasswordResetRequest(event) {
+    event.preventDefault();
+    const email = document.getElementById('pr-email').value.trim().toLowerCase();
+    const user = DB.findOne('users', u => u.email?.toLowerCase() === email);
+    if (!user) { this.toast('Nije pronađen korisnik sa tom email adresom.', 'warning'); return; }
+    DB.insert('passwordResetRequests', { userId: user.id, email, status: 'na_cekanju' });
+    DB.find('users', u => u.role === 'administrator').forEach(admin => this._notify(admin.id, 'password_reset', 'Zahtjev za reset lozinke', `${user.name} je zatražio/la novu lozinku.`, null));
+    bootstrap.Modal.getInstance(document.getElementById('passwordResetModal'))?.hide();
+    document.getElementById('password-reset-form').reset();
+    this.toast('Zahtjev za reset lozinke je poslan administratoru.', 'success');
+  },
+
+  // Export korisnika u Excel koristi trenutno dostupne korisnike za ulogu koja je prijavljena.
+  exportUsersToExcel() {
+    const current = Auth.currentUser;
+    let users = DB.findAll('users');
+    if (current.role === 'povjerenik') users = users.filter(u => u.role === 'stanar' && (current.buildingIds || []).includes(u.buildingId));
+    const rows = users.map(u => ({
+      'Ime i prezime': u.name, 'Email': u.email, 'Uloga': this.ROLES[u.role] || u.role, 'Telefon': u.phone || '',
+      'Pozicija': u.role === 'uposlenik' ? (u.position || '') : '', 'Referenca': u.reference || '',
+      'Zgrada': DB.findById('buildings', u.buildingId)?.name || '', 'Stan': u.apartment || '', 'Status': u.active ? 'Aktivan' : 'Neaktivan'
+    }));
+    this._downloadWorkbook('korisnici.xlsx', 'Korisnici', rows);
+  },
+
+  // Template za korisnike daje povjereniku i administratoru tačne kolone za import.
+  downloadUserTemplate() {
+    const rows = [{ name:'Ime Prezime', email:'email@primjer.ba', phone:'061 000 000', role: Auth.is('povjerenik') ? 'stanar' : 'stanar', building:'Naziv zgrade', apartment:'Stan 1', reference:'REF-001', position:'', active:'ne' }];
+    this._downloadWorkbook('template_korisnici.xlsx', 'Korisnici', rows);
+  },
+
+  // Import korisnika razlikuje administratora i povjerenika: administrator odmah unosi korisnike, povjerenik šalje batch na odobrenje.
+  importUsersFromExcel(input) {
+    const file = input.files?.[0];
+    if (!file) return;
+    this._readWorkbook(file).then(rows => {
+      if (Auth.is('povjerenik')) this._createUserImportBatch(rows, file.name);
+      else this._importUsersDirect(rows);
+      input.value = '';
+    }).catch(() => this.toast('Excel fajl nije moguće pročitati.', 'error'));
+  },
+
+  // Administratorov import provjerava duplikate po emailu i referenci prije upisa.
+  _importUsersDirect(rows) {
+    let imported = 0, skipped = 0;
+    rows.forEach(row => {
+      const user = this._normalizeUserRow(row);
+      if (!user.name || !user.email) { skipped++; return; }
+      if (DB.findOne('users', u => u.email?.toLowerCase() === user.email.toLowerCase() || (user.reference && u.reference === user.reference))) { skipped++; return; }
+      DB.insert('users', { ...user, password: user.password || this._randomPassword(), active: user.active === true });
+      imported++;
+    });
+    this.toast(`Import završen. Uvezeno: ${imported}, preskočeno: ${skipped}.`, imported ? 'success' : 'warning');
+    this.renderUsers();
+  },
+
+  // Povjerenikov upload se sprema kao batch zahtjev. Korisnici se kreiraju tek nakon administratorskog odobrenja.
+  _createUserImportBatch(rows, filename) {
+    const current = Auth.currentUser;
+    const allowedBuildings = current.buildingIds || [];
+    const normalized = rows.map(row => this._normalizeUserRow(row)).filter(row => row.name && row.email);
+    const validRows = normalized.filter(row => allowedBuildings.includes(row.buildingId));
+    if (!validRows.length) { this.toast('Nema validnih redova za zgrade koje su vam dodijeljene.', 'warning'); return; }
+    const batch = DB.insert('userImportBatches', { povjerenikId: current.id, status: 'na_cekanju', totalRows: validRows.length, importedRows: 0, sourceFile: filename });
+    validRows.forEach(row => DB.insert('userImportRows', { batchId: batch.id, ...row, password: row.password || this._randomPassword(), status: 'na_cekanju', rawData: row }));
+    DB.find('users', u => u.role === 'administrator').forEach(admin => this._notify(admin.id, 'user_import', 'Novi import stanara', `${current.name} je uploadovao/la ${validRows.length} stanara za odobrenje.`, null));
+    this.toast('Import je poslan administratoru na odobrenje.', 'success');
+  },
+
+  // Normalizacija podržava nazive kolona na bosanskom i engleskom radi lakšeg popunjavanja template-a.
+  _normalizeUserRow(row) {
+    const get = (...keys) => keys.map(k => row[k]).find(v => v !== undefined && v !== null && String(v).trim() !== '') || '';
+    const buildingName = String(get('building', 'Zgrada', 'zgrada')).trim();
+    const building = DB.findOne('buildings', b => b.id === buildingName || b.name?.toLowerCase() === buildingName.toLowerCase());
+    const roleRaw = String(get('role', 'Uloga', 'uloga') || 'stanar').toLowerCase();
+    const activeRaw = String(get('active', 'Status', 'status') || '').toLowerCase();
+    return {
+      name: String(get('name', 'Ime i prezime', 'Korisnik', 'korisnik')).trim(),
+      email: String(get('email', 'Email')).trim().toLowerCase(),
+      phone: String(get('phone', 'Telefon', 'Broj telefona')).trim(),
+      role: roleRaw.includes('admin') ? 'administrator' : roleRaw.includes('pov') ? 'povjerenik' : roleRaw.includes('upos') ? 'uposlenik' : 'stanar',
+      buildingId: building?.id || '',
+      apartment: String(get('apartment', 'Stan', 'stan')).trim(),
+      reference: String(get('reference', 'Referenca', 'referenca')).trim(),
+      position: String(get('position', 'Pozicija', 'pozicija')).trim(),
+      password: String(get('password', 'Lozinka', 'lozinka')).trim(),
+      active: ['aktivan', 'active', 'da', 'yes', 'true', '1'].includes(activeRaw)
+    };
+  },
+
+  // Export zgrada u Excel služi za izvještaj i za kontrolu podataka koji su u bazi.
+  exportBuildingsToExcel() {
+    let buildings = DB.findAll('buildings');
+    if (Auth.is('povjerenik')) buildings = buildings.filter(b => (Auth.currentUser.buildingIds || []).includes(b.id));
+    const rows = buildings.map(b => ({ 'Naziv': b.name, 'Adresa': b.address, 'Grad': b.city, 'Poštanski broj': b.postalCode || '', 'Spratova': b.floors, 'Stanova': b.units, 'Povjerenik': DB.findById('users', b.povjerenikId)?.name || '' }));
+    this._downloadWorkbook('zgrade.xlsx', 'Zgrade', rows);
+  },
+
+  // Template za zgrade ima kolone koje se direktno mapiraju na Supabase tabelu buildings.
+  downloadBuildingTemplate() {
+    this._downloadWorkbook('template_zgrade.xlsx', 'Zgrade', [{ name:'Naziv zgrade', address:'Adresa 1', city:'Sarajevo', postalCode:'71000', floors:8, units:32, povjerenikEmail:'povjerenik@email.ba' }]);
+  },
+
+  // Import zgrada provjerava duplikate po nazivu i adresi.
+  importBuildingsFromExcel(input) {
+    const file = input.files?.[0];
+    if (!file) return;
+    this._readWorkbook(file).then(rows => {
+      let imported = 0, skipped = 0;
+      rows.forEach(row => {
+        const get = (...keys) => keys.map(k => row[k]).find(v => v !== undefined && v !== null && String(v).trim() !== '') || '';
+        const name = String(get('name', 'Naziv', 'naziv')).trim();
+        const address = String(get('address', 'Adresa', 'adresa')).trim();
+        const city = String(get('city', 'Grad', 'grad') || 'Sarajevo').trim();
+        if (!name || !address) { skipped++; return; }
+        if (DB.findOne('buildings', b => b.name?.toLowerCase() === name.toLowerCase() && b.address?.toLowerCase() === address.toLowerCase())) { skipped++; return; }
+        const povEmail = String(get('povjerenikEmail', 'Povjerenik email', 'povjerenik_email')).trim().toLowerCase();
+        const pov = povEmail ? DB.findOne('users', u => u.email?.toLowerCase() === povEmail && u.role === 'povjerenik') : null;
+        DB.insert('buildings', { name, address, city, postalCode: String(get('postalCode', 'Poštanski broj', 'postal_code')).trim(), floors: Number(get('floors', 'Spratova')) || 5, units: Number(get('units', 'Stanova')) || 20, povjerenikId: pov?.id || null });
+        imported++;
+      });
+      input.value = '';
+      this.toast(`Import zgrada završen. Uvezeno: ${imported}, preskočeno: ${skipped}.`, imported ? 'success' : 'warning');
+      this.renderBuildings();
+    }).catch(() => this.toast('Excel fajl nije moguće pročitati.', 'error'));
+  },
+
+  // Stranica za administratorske zahtjeve objedinjuje registracije, reset lozinke i import stanara.
+  renderAdminRequests() {
+    if (!Auth.is('administrator')) { this.navigate('dashboard'); return; }
+    const registrations = DB.find('registrationRequests', r => r.status === 'na_cekanju');
+    const resets = DB.find('passwordResetRequests', r => r.status === 'na_cekanju');
+    const batches = DB.find('userImportBatches', b => b.status === 'na_cekanju');
+    const el = document.getElementById('page-admin-requests');
+    el.innerHTML = `
+      <div class="dashboard-hero mb-3"><div><p class="eyebrow">Administracija</p><h2>Zahtjevi koji čekaju obradu</h2><p>Ovdje se odobravaju registracije, reset lozinke i import stanara koje dostavlja povjerenik.</p></div></div>
+      <div class="row g-3">
+        <div class="col-xl-4">${this._requestCard('Registracije', 'bi-person-plus', registrations, item => this._registrationRequestRow(item))}</div>
+        <div class="col-xl-4">${this._requestCard('Reset lozinke', 'bi-key', resets, item => this._resetRequestRow(item))}</div>
+        <div class="col-xl-4">${this._requestCard('Import stanara', 'bi-file-earmark-spreadsheet', batches, item => this._importBatchRow(item))}</div>
+      </div>`;
+  },
+
+  // Zajednički okvir za listu zahtjeva, kako tri kolone imaju isti vizuelni ritam.
+  _requestCard(title, icon, rows, rowRenderer) {
+    return `<div class="app-card h-100"><div class="card-header-custom"><h6><i class="bi ${icon} me-2"></i>${title}</h6><span class="badge bg-primary">${rows.length}</span></div><div class="p-3 request-list">${rows.length ? rows.map(rowRenderer).join('') : '<div class="empty-state small-empty"><i class="bi bi-check-circle"></i><p>Nema zahtjeva.</p></div>'}</div></div>`;
+  },
+
+  _registrationRequestRow(req) {
+    const building = DB.findById('buildings', req.buildingId);
+    return `<div class="request-item"><div><strong>${this.esc(req.name)}</strong><div class="text-tiny text-secondary">${this.esc(req.email)} · ${this.esc(building?.name || '')}</div></div><div class="d-flex gap-1"><button class="btn btn-sm btn-success" onclick="App.approveRegistration('${req.id}')"><i class="bi bi-check"></i></button><button class="btn btn-sm btn-outline-danger" onclick="App.rejectRequest('registrationRequests','${req.id}')"><i class="bi bi-x"></i></button></div></div>`;
+  },
+
+  _resetRequestRow(req) {
+    return `<div class="request-item"><div><strong>${this.esc(req.email)}</strong><div class="text-tiny text-secondary">Zahtjev za novu privremenu lozinku</div></div><div class="d-flex gap-1"><button class="btn btn-sm btn-success" onclick="App.approvePasswordReset('${req.id}')"><i class="bi bi-check"></i></button><button class="btn btn-sm btn-outline-danger" onclick="App.rejectRequest('passwordResetRequests','${req.id}')"><i class="bi bi-x"></i></button></div></div>`;
+  },
+
+  _importBatchRow(batch) {
+    const pov = DB.findById('users', batch.povjerenikId);
+    return `<div class="request-item"><div><strong>${batch.totalRows || 0} stanara</strong><div class="text-tiny text-secondary">${this.esc(pov?.name || 'Povjerenik')} · ${this.esc(batch.sourceFile || '')}</div></div><div class="d-flex gap-1"><button class="btn btn-sm btn-success" onclick="App.approveUserImport('${batch.id}')"><i class="bi bi-check"></i></button><button class="btn btn-sm btn-outline-danger" onclick="App.rejectRequest('userImportBatches','${batch.id}')"><i class="bi bi-x"></i></button></div></div>`;
+  },
+
+  // Odobrenjem registracije nastaje aktivan nalog stanara.
+  approveRegistration(id) {
+    const req = DB.findById('registrationRequests', id);
+    if (!req) return;
+    if (DB.findOne('users', u => u.email?.toLowerCase() === req.email?.toLowerCase())) { this.toast('Korisnik već postoji.', 'warning'); return; }
+    DB.insert('users', { name: req.name, email: req.email, password: req.password, phone: req.phone, role: 'stanar', buildingId: req.buildingId, buildingIds: [], apartment: req.apartment, reference: req.reference, active: true });
+    DB.update('registrationRequests', id, { status: 'odobren', reviewedBy: Auth.currentUser.id, reviewedAt: new Date().toISOString() });
+    this.toast('Registracija je odobrena.', 'success');
+    this.renderAdminRequests();
+  },
+
+  // Reset lozinke u demo verziji generiše privremenu lozinku i upisuje je u korisnički nalog.
+  approvePasswordReset(id) {
+    const req = DB.findById('passwordResetRequests', id);
+    const user = req ? DB.findById('users', req.userId) : null;
+    if (!req || !user) return;
+    const newPassword = this._randomPassword();
+    DB.update('users', user.id, { password: newPassword });
+    DB.update('passwordResetRequests', id, { status: 'odobren', reviewedBy: Auth.currentUser.id, reviewedAt: new Date().toISOString(), newPassword });
+    this.toast(`Nova privremena lozinka za ${user.email}: ${newPassword}`, 'success');
+    this.renderAdminRequests();
+  },
+
+  // Odobrenjem batch importa korisnici se kreiraju kao neaktivni i mogu se posebno aktivirati nakon provjere.
+  approveUserImport(batchId) {
+    const batch = DB.findById('userImportBatches', batchId);
+    if (!batch) return;
+    const rows = DB.find('userImportRows', row => row.batchId === batchId && row.status === 'na_cekanju');
+    let imported = 0, skipped = 0;
+    rows.forEach(row => {
+      if (DB.findOne('users', u => u.email?.toLowerCase() === row.email?.toLowerCase() || (row.reference && u.reference === row.reference))) { skipped++; DB.update('userImportRows', row.id, { status: 'preskocen' }); return; }
+      DB.insert('users', { name: row.name, email: row.email, password: row.password || this._randomPassword(), phone: row.phone, role: 'stanar', buildingId: row.buildingId, buildingIds: [], apartment: row.apartment, reference: row.reference, active: false });
+      DB.update('userImportRows', row.id, { status: 'odobren' });
+      imported++;
+    });
+    DB.update('userImportBatches', batchId, { status: 'odobren', importedRows: imported, reviewedBy: Auth.currentUser.id, reviewedAt: new Date().toISOString(), errorMessage: skipped ? `${skipped} redova preskočeno zbog duplikata.` : null });
+    this.toast(`Import odobren. Kreirano: ${imported}, preskočeno: ${skipped}.`, imported ? 'success' : 'warning');
+    this.renderAdminRequests();
+  },
+
+  // Odbijanje se koristi za sve tipove zahtjeva jer imaju isti statusni model.
+  rejectRequest(collection, id) {
+    DB.update(collection, id, { status: 'odbijen', reviewedBy: Auth.currentUser.id, reviewedAt: new Date().toISOString() });
+    this.toast('Zahtjev je odbijen.', 'success');
+    this.renderAdminRequests();
+  },
+
+  // Brojač administratorskih obaveza prikazuje se na dashboardu i u meniju.
+  _pendingAdminWorkCount() {
+    return DB.find('registrationRequests', r => r.status === 'na_cekanju').length +
+      DB.find('passwordResetRequests', r => r.status === 'na_cekanju').length +
+      DB.find('userImportBatches', r => r.status === 'na_cekanju').length;
+  },
+
+  // U meniju se prikazuju brojevi novih tiketa i administratorskih zahtjeva.
+  _updateNavBadges() {
+    const u = Auth.currentUser;
+    if (!u) return;
+    if (u.role === 'povjerenik') {
+      const pending = DB.find('tickets', t => t.status === 'novi' && (u.buildingIds || []).includes(t.buildingId)).length;
+      const el = document.getElementById('nav-badge-tickets');
+      if (el) el.textContent = pending || '';
+    }
+    if (u.role === 'administrator') {
+      const el = document.getElementById('nav-badge-admin-requests');
+      if (el) el.textContent = this._pendingAdminWorkCount() || '';
+    }
+  },
+
+  // Pomoćni toolbar za prikaze koji su otvoreni iz dashboard kartica.
+  _backToDashboardBar(title) {
+    return `<div class="back-dashboard-bar"><button class="btn btn-sm btn-outline-secondary" onclick="App.navigate('dashboard')"><i class="bi bi-arrow-left me-1"></i>Nazad na dashboard</button><strong>${this.esc(title)}</strong></div>`;
+  },
+
+  // Čitanje Excel fajla je zajedničko za korisnike i zgrade.
+  _readWorkbook(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = event => {
+        try {
+          const workbook = XLSX.read(new Uint8Array(event.target.result), { type: 'array' });
+          const sheet = workbook.Sheets[workbook.SheetNames[0]];
+          resolve(XLSX.utils.sheet_to_json(sheet, { defval: '' }));
+        } catch (error) { reject(error); }
+      };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(file);
+    });
+  },
+
+  // Kreira i preuzima Excel fajl iz liste JavaScript objekata.
+  _downloadWorkbook(filename, sheetName, rows) {
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(rows.length ? rows : [{ Napomena: 'Nema podataka za export.' }]);
+    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+    XLSX.writeFile(workbook, filename);
+  },
+
+  // Random lozinka se koristi za bulk import i administratorski reset lozinke.
+  _randomPassword() {
+    return `zg-${Math.random().toString(36).slice(2, 6)}-${Math.floor(1000 + Math.random() * 9000)}`;
   },
 
   // ── HELPERS ────────────────────────────────────────────────────────────

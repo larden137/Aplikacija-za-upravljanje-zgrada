@@ -42,6 +42,11 @@
       <button type="submit" class="btn btn-primary w-100 py-2 mt-1">
         <i class="bi bi-box-arrow-in-right me-2"></i>Prijava
       </button>
+      <div class="login-links">
+        <button type="button" onclick="App.openSignupModal()">Registracija korisnika</button>
+        <span>•</span>
+        <button type="button" onclick="App.openPasswordResetModal()">Zaboravljena lozinka</button>
+      </div>
     </form>
 
     <!-- Demo nalozi služe za brzo testiranje različitih uloga u aplikaciji. -->
@@ -117,10 +122,66 @@
       <!-- Obavijesti: poruke koje nastaju promjenom statusa ili dodjelom tiketa. -->
       <div id="page-notifications" class="page"></div>
 
+      <!-- Zahtjevi: administrator pregleda registracije, reset lozinki i import stanara. -->
+      <div id="page-admin-requests" class="page"></div>
+
       <!-- Profil korisnika: osnovni podaci i povezani tiketi. -->
       <div id="page-user-profile" class="page"></div>
 
     </main>
+  </div>
+</div>
+
+<!-- Modal za registraciju novog korisnika. Korisnik se ne aktivira odmah, nego administrator pregleda zahtjev. -->
+<div class="modal fade" id="signupModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content border-0 rounded-3">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title">Registracija korisnika</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="signup-form" onsubmit="App.submitSignupRequest(event)">
+          <div class="row g-3">
+            <div class="col-md-6"><label class="form-label">Ime i prezime *</label><input class="form-control" id="su-name" required></div>
+            <div class="col-md-6"><label class="form-label">Email *</label><input type="email" class="form-control" id="su-email" required></div>
+            <div class="col-md-6"><label class="form-label">Telefon</label><input class="form-control" id="su-phone"></div>
+            <div class="col-md-6"><label class="form-label">Lozinka *</label><input type="password" class="form-control" id="su-password" required></div>
+            <div class="col-md-6"><label class="form-label">Zgrada *</label><select class="form-select" id="su-building" required></select></div>
+            <div class="col-md-6"><label class="form-label">Referenca sa računa *</label><input class="form-control" id="su-reference" required></div>
+            <div class="col-md-6"><label class="form-label">Stan / broj stana</label><input class="form-control" id="su-apartment" placeholder="npr. Stan 12"></div>
+          </div>
+          <div class="alert alert-info small mt-3 mb-0">Zahtjev se šalje administratoru. Prijava je moguća tek nakon odobrenja naloga.</div>
+          <div class="d-flex justify-content-end gap-2 mt-3">
+            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Odustani</button>
+            <button type="submit" class="btn btn-primary">Pošalji zahtjev</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal za zaboravljenu lozinku. U akademskoj verziji reset se rješava kroz administratorski zahtjev. -->
+<div class="modal fade" id="passwordResetModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 rounded-3">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title">Oporavak lozinke</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="password-reset-form" onsubmit="App.submitPasswordResetRequest(event)">
+          <label class="form-label">Email adresa naloga *</label>
+          <input type="email" class="form-control" id="pr-email" required>
+          <div class="form-text">Administrator će dobiti zahtjev i postaviti novu privremenu lozinku.</div>
+          <div class="d-flex justify-content-end gap-2 mt-3">
+            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Odustani</button>
+            <button type="submit" class="btn btn-primary">Pošalji zahtjev</button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </div>
 
