@@ -1211,11 +1211,14 @@ const App = {
       ? (u.buildingId ? [DB.findById('buildings', u.buildingId)] : [])
       : DB.findAll('buildings');
 
+    const myBuilding = u.buildingId ? DB.findById('buildings', u.buildingId) : null;
+    const myTickets = DB.find('tickets', t => t.stanarId === u.id).length;
+
     const el = document.getElementById('page-new-ticket');
     el.innerHTML = `
-      <div class="row justify-content-center">
-        <div class="col-lg-8">
-          <div class="app-card">
+      <div class="row g-3 align-items-start">
+        <div class="col-12 col-xxl-5 col-xl-6">
+          <div class="app-card h-100">
             <div class="card-header-custom">
               <h6><i class="bi bi-plus-circle me-2"></i>Podnesi Novi Zahtjev</h6>
             </div>
@@ -1230,8 +1233,7 @@ const App = {
                 </div>
                 <div class="mb-3">
                   <label class="form-label">Naslov zahtjeva *</label>
-                  <input type="text" class="form-control" id="nt-title" required maxlength="100"
-                         placeholder="Kratko opišite problem...">
+                  <input type="text" class="form-control" id="nt-title" required maxlength="100" placeholder="Kratko opišite problem...">
                 </div>
                 <div class="row g-3 mb-3">
                   <div class="col-md-6">
@@ -1251,21 +1253,55 @@ const App = {
                 </div>
                 <div class="mb-3">
                   <label class="form-label">Detaljni opis problema *</label>
-                  <textarea class="form-control" id="nt-desc" rows="5" required
-                            placeholder="Opišite problem što detaljnije - kada je počelo, kako se manifestuje, da li je već prijavljeno ranije..."></textarea>
+                  <textarea class="form-control" id="nt-desc" rows="6" required placeholder="Opišite problem što detaljnije - kada je počelo, kako se manifestuje, da li je već prijavljeno ranije..."></textarea>
                 </div>
                 <div class="mb-4">
                   <label class="form-label">Prilog / Fotografija (opcionalno)</label>
                   <input type="file" class="form-control" id="nt-file" accept="image/*,.pdf">
                   <div class="form-text">Maksimalna veličina fajla: 5MB</div>
                 </div>
-                <div class="d-flex gap-2">
-                  <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-send me-2"></i>Pošalji Zahtjev
-                  </button>
+                <div class="d-flex gap-2 flex-wrap">
+                  <button type="submit" class="btn btn-primary"><i class="bi bi-send me-2"></i>Pošalji Zahtjev</button>
                   <button type="button" class="btn btn-light" onclick="App.navigate('tickets')">Odustani</button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+        <div class="col-12 col-xxl-7 col-xl-6">
+          <div class="page-side-stack">
+            <div class="app-card">
+              <div class="card-header-custom"><h6><i class="bi bi-info-circle me-2"></i>Prije slanja zahtjeva</h6></div>
+              <div class="p-3">
+                <div class="info-list">
+                  <div class="info-list-item"><strong>1.</strong><span>Napiši jasan naslov kako bi povjerenik i administrator odmah razumjeli problem.</span></div>
+                  <div class="info-list-item"><strong>2.</strong><span>U opisu navedi gdje se problem nalazi, koliko traje i da li utiče na više stanara.</span></div>
+                  <div class="info-list-item"><strong>3.</strong><span>Ako imaš fotografiju ili dokument, dodaj prilog jer to ubrzava obradu zahtjeva.</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="row g-3">
+              <div class="col-12 col-lg-6">
+                <div class="app-card h-100">
+                  <div class="card-header-custom"><h6><i class="bi bi-person me-2"></i>Vaš profil</h6></div>
+                  <div class="p-3">
+                    <div class="focus-row"><span>Korisnik</span><strong>${this.esc(u.name)}</strong></div>
+                    <div class="focus-row"><span>Uloga</span><strong>${this.esc(this.ROLES[u.role] || u.role)}</strong></div>
+                    <div class="focus-row"><span>Vaši tiketi</span><strong>${myTickets}</strong></div>
+                    <div class="focus-row" style="border-bottom:none"><span>Zgrada</span><strong>${this.esc(myBuilding?.name || 'Odabir iz forme')}</strong></div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-12 col-lg-6">
+                <div class="app-card h-100">
+                  <div class="card-header-custom"><h6><i class="bi bi-diagram-3 me-2"></i>Tok obrade</h6></div>
+                  <div class="p-3 small text-secondary">
+                    <p class="mb-2"><strong>Novi zahtjev</strong> ide na pregled povjereniku ili administratoru.</p>
+                    <p class="mb-2"><strong>Odobren</strong> zahtjev se može dodijeliti tehničaru.</p>
+                    <p class="mb-0"><strong>Riješen</strong> tiket ostaje dostupan u vašoj evidenciji i historiji rada.</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1355,7 +1391,7 @@ const App = {
     const active   = tickets.filter(t => !['zatvoren','odbijen'].includes(t.status)).length;
     const pending  = tickets.filter(t => t.status === 'novi').length;
     const isAdmin  = Auth.is('administrator');
-    return `<div class="col-md-6 col-lg-4">
+    return `<div class="col-12 col-md-6 col-xxl-6">
       <div class="building-card h-100">
         <div class="d-flex justify-content-between align-items-start mb-2">
           <div>
@@ -1705,22 +1741,24 @@ const App = {
     const notifs = DB.find('notifications', n => n.userId === u.id)
       .sort((a,b) => b.createdAt.localeCompare(a.createdAt));
 
+    const unread = notifs.filter(n => !n.read);
+    const ticketLinked = notifs.filter(n => n.ticketId).slice(0, 5);
+    const latestUnread = unread.slice(0, 5);
+
     const el = document.getElementById('page-notifications');
     el.innerHTML = `
-      <div class="row justify-content-center">
-        <div class="col-lg-8">
-          <div class="app-card">
+      <div class="row g-3 align-items-start">
+        <div class="col-12 col-xxl-8">
+          <div class="app-card page-fill h-100">
             <div class="card-header-custom">
-              <h6><i class="bi bi-bell me-2"></i>Obavijesti (${notifs.filter(n=>!n.read).length} nepročitanih)</h6>
-              ${notifs.some(n=>!n.read) ? `<button class="btn btn-sm btn-outline-secondary" onclick="App.markAllRead()">
-                <i class="bi bi-check-all me-1"></i>Označi sve kao pročitano
-              </button>` : ''}
+              <h6><i class="bi bi-bell me-2"></i>Obavijesti (${unread.length} nepročitanih)</h6>
+              ${unread.length ? `<button class="btn btn-sm btn-outline-secondary" onclick="App.markAllRead()"><i class="bi bi-check-all me-1"></i>Označi sve kao pročitano</button>` : ''}
             </div>
             <div class="card-body-custom">
               ${notifs.length === 0
                 ? `<div class="empty-state"><i class="bi bi-bell-slash"></i><p>Nemate obavijesti.</p></div>`
                 : notifs.map(n => `
-                    <div class="notif-item ${n.read?'':'unread'}" onclick="App.markNotifRead('${n.id}','${n.ticketId}')">
+                    <div class="notif-item ${n.read?'':'unread'}" onclick="App.markNotifRead('${n.id}','${n.ticketId || ''}')">
                       <div class="notif-icon ${n.read?'bg-light':'bg-primary bg-opacity-10'}">
                         <i class="bi ${this._notifIcon(n.type)} ${n.read?'text-secondary':'text-primary'}"></i>
                       </div>
@@ -1731,6 +1769,31 @@ const App = {
                       </div>
                       ${!n.read ? '<div class="notif-dot"></div>' : ''}
                     </div>`).join('')}
+            </div>
+          </div>
+        </div>
+        <div class="col-12 col-xxl-4">
+          <div class="page-side-stack desktop-sticky">
+            <div class="app-card">
+              <div class="card-header-custom"><h6><i class="bi bi-graph-up-arrow me-2"></i>Kratki pregled</h6></div>
+              <div class="p-3">
+                <div class="metrics-compact">
+                  <div class="metric-box"><span>Ukupno</span><strong>${notifs.length}</strong></div>
+                  <div class="metric-box"><span>Nepročitane</span><strong>${unread.length}</strong></div>
+                  <div class="metric-box"><span>Povezane s tiketom</span><strong>${ticketLinked.length}</strong></div>
+                  <div class="metric-box"><span>Korisnik</span><strong>${this.esc(u.name.split(' ')[0] || u.name)}</strong></div>
+                </div>
+              </div>
+            </div>
+            <div class="app-card">
+              <div class="card-header-custom"><h6><i class="bi bi-lightning me-2"></i>Najnovije obavijesti</h6></div>
+              <div class="p-3">
+                ${(latestUnread.length ? latestUnread : ticketLinked).slice(0,5).map(item => `
+                  <div class="mini-list-row" onclick="App.markNotifRead('${item.id}','${item.ticketId || ''}')">
+                    <div class="notif-icon bg-primary bg-opacity-10"><i class="bi ${this._notifIcon(item.type)} text-primary"></i></div>
+                    <div style="min-width:0"><div class="fw-600 text-truncate">${this.esc(item.title)}</div><div class="text-tiny text-secondary">${this.fmtDate(item.createdAt)}</div></div>
+                  </div>`).join('') || '<div class="text-secondary small">Trenutno nema izdvojenih obavijesti.</div>'}
+              </div>
             </div>
           </div>
         </div>
@@ -2245,7 +2308,14 @@ const App = {
       if (u.role === 'uposlenik') tickets = tickets.filter(t => t.assignedTo === u.id);
       tickets = tickets.slice().reverse();
     }
+
     const title = this.currentParams.dashboardTitle || 'Pregled tiketa';
+    const visibleTickets = tickets.slice();
+    const activeCount = visibleTickets.filter(t => ['novi','odobren','dodjeljen','u_toku'].includes(t.status)).length;
+    const waitingCount = visibleTickets.filter(t => t.status === 'novi').length;
+    const assignedCount = visibleTickets.filter(t => ['dodjeljen','u_toku'].includes(t.status)).length;
+    const solvedCount = visibleTickets.filter(t => ['rijesen','zatvoren'].includes(t.status)).length;
+
     const el = document.getElementById('page-tickets');
     el.innerHTML = `
       ${this.currentParams.fromDashboard ? this._backToDashboardBar(title) : ''}
@@ -2256,9 +2326,42 @@ const App = {
           ${u.role !== 'stanar' ? `<select class="form-select form-select-sm" id="filter-building" onchange="App.filterTickets()"><option value="">Sve zgrade</option>${DB.findAll('buildings').map(b => `<option value="${b.id}">${this.esc(b.name)}</option>`).join('')}</select>` : ''}
           <input type="text" class="form-control form-control-sm" id="filter-search" placeholder="Pretraži..." oninput="App.filterTickets()">
         </div>
-        ${(u.role === 'stanar' || u.role === 'administrator') ? `<button class="btn btn-primary btn-sm" onclick="App.navigate('new-ticket')"><i class="bi bi-plus me-1"></i>Novi Tiket</button>` : ''}
+        <div class="toolbar-right">
+          ${(u.role === 'stanar' || u.role === 'administrator') ? `<button class="btn btn-primary btn-sm" onclick="App.navigate('new-ticket')"><i class="bi bi-plus me-1"></i>Novi Tiket</button>` : ''}
+        </div>
       </div>
-      <div class="app-card page-fill"><div class="card-body-custom" id="tickets-table-wrap">${this._ticketsTable(tickets)}</div></div>`;
+
+      <div class="row g-3 align-items-stretch">
+        <div class="col-12 col-xxl-9">
+          <div class="app-card page-fill h-100">
+            <div class="card-body-custom" id="tickets-table-wrap">${this._ticketsTable(visibleTickets)}</div>
+          </div>
+        </div>
+        <div class="col-12 col-xxl-3">
+          <div class="page-side-stack desktop-sticky">
+            <div class="app-card">
+              <div class="card-header-custom"><h6><i class="bi bi-activity me-2"></i>Sažetak prikaza</h6></div>
+              <div class="p-3">
+                <div class="metrics-compact">
+                  <div class="metric-box"><span>Ukupno</span><strong>${visibleTickets.length}</strong></div>
+                  <div class="metric-box"><span>Aktivni</span><strong>${activeCount}</strong></div>
+                  <div class="metric-box"><span>Na čekanju</span><strong>${waitingCount}</strong></div>
+                  <div class="metric-box"><span>Dodijeljeni</span><strong>${assignedCount}</strong></div>
+                  <div class="metric-box"><span>Riješeni</span><strong>${solvedCount}</strong></div>
+                  <div class="metric-box"><span>Vaša uloga</span><strong>${this.esc(this.ROLES[u.role] || u.role)}</strong></div>
+                </div>
+              </div>
+            </div>
+            <div class="app-card">
+              <div class="card-header-custom"><h6><i class="bi bi-lightning-charge me-2"></i>Brza napomena</h6></div>
+              <div class="p-3 small text-secondary">
+                <p class="mb-2">Koristi filtere iznad tabele kako bi brzo došao do tiketa po statusu, prioritetu ili zgradi.</p>
+                <p class="mb-0">Klik na bilo koji red vodi direktno na detalje tiketa i dalju obradu.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>`;
   },
 
   // Pregled zgrada dobija export/import alate za administratora i puniji grid na velikim ekranima.
@@ -2267,6 +2370,14 @@ const App = {
     const isAdmin = u.role === 'administrator';
     let buildings = DB.findAll('buildings');
     if (u.role === 'povjerenik') buildings = buildings.filter(b => (u.buildingIds || []).includes(b.id));
+
+    const buildingIds = buildings.map(b => b.id);
+    const relatedTickets = DB.find('tickets', t => buildingIds.includes(t.buildingId));
+    const pendingCount = relatedTickets.filter(t => t.status === 'novi').length;
+    const activeCount = relatedTickets.filter(t => !['zatvoren','odbijen'].includes(t.status)).length;
+    const unitsCount = buildings.reduce((sum, b) => sum + Number(b.units || 0), 0);
+    const floorsCount = buildings.reduce((sum, b) => sum + Number(b.floors || 0), 0);
+
     const el = document.getElementById('page-buildings');
     el.innerHTML = `
       ${this.currentParams.fromDashboard ? this._backToDashboardBar('Zgrade') : ''}
@@ -2279,7 +2390,35 @@ const App = {
           <button class="btn btn-primary btn-sm" onclick="App.openBuildingModal()"><i class="bi bi-plus me-1"></i>Nova Zgrada</button>` : ''}
         </div>
       </div>
-      <div class="row g-3 buildings-grid-wide" id="buildings-grid">${buildings.map(b => this._buildingCard(b)).join('')}</div>
+
+      <div class="row g-3 align-items-start">
+        <div class="col-12 col-xxl-9">
+          <div class="row g-3 buildings-grid-wide" id="buildings-grid">${buildings.map(b => this._buildingCard(b)).join('')}</div>
+        </div>
+        <div class="col-12 col-xxl-3">
+          <div class="page-side-stack desktop-sticky">
+            <div class="app-card">
+              <div class="card-header-custom"><h6><i class="bi bi-buildings me-2"></i>Pregled fonda</h6></div>
+              <div class="p-3">
+                <div class="metrics-compact">
+                  <div class="metric-box"><span>Zgrade</span><strong>${buildings.length}</strong></div>
+                  <div class="metric-box"><span>Stanova</span><strong>${unitsCount}</strong></div>
+                  <div class="metric-box"><span>Spratova</span><strong>${floorsCount}</strong></div>
+                  <div class="metric-box"><span>Aktivni tiketi</span><strong>${activeCount}</strong></div>
+                </div>
+              </div>
+            </div>
+            <div class="app-card">
+              <div class="card-header-custom"><h6><i class="bi bi-clipboard-data me-2"></i>Operativno stanje</h6></div>
+              <div class="p-3">
+                <div class="focus-row"><span>Na čekanju</span><strong>${pendingCount}</strong></div>
+                <div class="focus-row"><span>Aktivna zgrada</span><strong>${buildings[0] ? this.esc(buildings[0].name) : '—'}</strong></div>
+                <div class="focus-row" style="border-bottom:none"><span>Napomena</span><strong>${isAdmin ? 'Admin pristup' : 'Povjerenik pregled'}</strong></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       ${isAdmin ? this._buildingModal() : ''}`;
   },
 
@@ -2300,6 +2439,11 @@ const App = {
     const isPovjerenik = u.role === 'povjerenik';
     let users = DB.findAll('users');
     if (isPovjerenik) users = users.filter(item => item.role === 'stanar' && (u.buildingIds || []).includes(item.buildingId));
+
+    const activeCount = users.filter(item => item.active).length;
+    const inactiveCount = users.filter(item => !item.active).length;
+    const roleStats = Object.keys(this.ROLES).map(role => ({ role, count: users.filter(item => item.role === role).length })).filter(item => item.count > 0);
+
     const el = document.getElementById('page-users');
     el.innerHTML = `
       ${this.currentParams.fromDashboard ? this._backToDashboardBar(isAdmin ? 'Korisnici' : 'Stanari') : ''}
@@ -2316,7 +2460,33 @@ const App = {
         </div>
       </div>
       ${isPovjerenik ? `<div class="alert alert-info small">Povjerenik može preuzeti template i uploadovati stanare samo za zgrade koje su mu dodijeljene. Upload ide administratoru na odobrenje.</div>` : ''}
-      <div class="app-card page-fill"><div class="card-body-custom" id="users-table-wrap">${this._usersTable(users)}</div></div>
+
+      <div class="row g-3 align-items-stretch">
+        <div class="col-12 col-xxl-9">
+          <div class="app-card page-fill h-100"><div class="card-body-custom" id="users-table-wrap">${this._usersTable(users)}</div></div>
+        </div>
+        <div class="col-12 col-xxl-3">
+          <div class="page-side-stack desktop-sticky">
+            <div class="app-card">
+              <div class="card-header-custom"><h6><i class="bi bi-people me-2"></i>Sažetak korisnika</h6></div>
+              <div class="p-3">
+                <div class="metrics-compact">
+                  <div class="metric-box"><span>Ukupno</span><strong>${users.length}</strong></div>
+                  <div class="metric-box"><span>Aktivni</span><strong>${activeCount}</strong></div>
+                  <div class="metric-box"><span>Neaktivni</span><strong>${inactiveCount}</strong></div>
+                  <div class="metric-box"><span>Prikaz</span><strong>${isAdmin ? 'Svi' : 'Stanari'}</strong></div>
+                </div>
+              </div>
+            </div>
+            <div class="app-card">
+              <div class="card-header-custom"><h6><i class="bi bi-bar-chart me-2"></i>Raspodjela po ulozi</h6></div>
+              <div class="p-3">
+                ${roleStats.map(item => `<div class="focus-row"><span>${this.esc(this.ROLES[item.role] || item.role)}</span><strong>${item.count}</strong></div>`).join('') || '<div class="text-secondary small">Nema podataka za prikaz.</div>'}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       ${isAdmin ? this._userModal() : ''}`;
   },
 
@@ -2603,13 +2773,40 @@ const App = {
     const registrations = DB.find('registrationRequests', r => r.status === 'na_cekanju');
     const resets = DB.find('passwordResetRequests', r => r.status === 'na_cekanju');
     const batches = DB.find('userImportBatches', b => b.status === 'na_cekanju');
+    const totalPending = registrations.length + resets.length + batches.length;
     const el = document.getElementById('page-admin-requests');
     el.innerHTML = `
       <div class="dashboard-hero mb-3"><div><p class="eyebrow">Administracija</p><h2>Zahtjevi koji čekaju obradu</h2><p>Ovdje se odobravaju registracije, reset lozinke i import stanara koje dostavlja povjerenik.</p></div></div>
-      <div class="row g-3">
-        <div class="col-xl-4">${this._requestCard('Registracije', 'bi-person-plus', registrations, item => this._registrationRequestRow(item))}</div>
-        <div class="col-xl-4">${this._requestCard('Reset lozinke', 'bi-key', resets, item => this._resetRequestRow(item))}</div>
-        <div class="col-xl-4">${this._requestCard('Import stanara', 'bi-file-earmark-spreadsheet', batches, item => this._importBatchRow(item))}</div>
+      <div class="row g-3 align-items-start">
+        <div class="col-12 col-xxl-8">
+          <div class="row g-3">
+            <div class="col-12 col-lg-6">${this._requestCard('Registracije', 'bi-person-plus', registrations, item => this._registrationRequestRow(item))}</div>
+            <div class="col-12 col-lg-6">${this._requestCard('Reset lozinke', 'bi-key', resets, item => this._resetRequestRow(item))}</div>
+            <div class="col-12">${this._requestCard('Import stanara', 'bi-file-earmark-spreadsheet', batches, item => this._importBatchRow(item))}</div>
+          </div>
+        </div>
+        <div class="col-12 col-xxl-4">
+          <div class="page-side-stack desktop-sticky">
+            <div class="app-card">
+              <div class="card-header-custom"><h6><i class="bi bi-hourglass-split me-2"></i>Trenutni pregled</h6></div>
+              <div class="p-3">
+                <div class="metrics-compact">
+                  <div class="metric-box"><span>Ukupno</span><strong>${totalPending}</strong></div>
+                  <div class="metric-box"><span>Registracije</span><strong>${registrations.length}</strong></div>
+                  <div class="metric-box"><span>Reseti</span><strong>${resets.length}</strong></div>
+                  <div class="metric-box"><span>Importi</span><strong>${batches.length}</strong></div>
+                </div>
+              </div>
+            </div>
+            <div class="app-card">
+              <div class="card-header-custom"><h6><i class="bi bi-shield-check me-2"></i>Napomena</h6></div>
+              <div class="p-3 small text-secondary">
+                <p class="mb-2">Prije odobrenja provjeri da li su email, referenca i zgrada ispravno uneseni.</p>
+                <p class="mb-0">Kod importa stanara sistem preskače duplikate po emailu i referenci.</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>`;
   },
 

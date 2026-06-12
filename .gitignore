@@ -2,7 +2,5 @@ node_modules/
 dist/
 .env
 .vs/
-.claude/
 *.vsidx
-package-lock.json
 .DS_Store
