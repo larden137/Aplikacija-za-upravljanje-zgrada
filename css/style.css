@@ -1637,3 +1637,81 @@ html, body {
     margin-left: auto;
   }
 }
+
+
+/* ── Globalno ujednačavanje svih prozora iz menija ──
+   Ovdje Zgrade koristimo kao referentni raspored: isti lijevi/desni razmak,
+   isti ritam kartica i isti osjećaj širine kroz sve ekrane aplikacije. */
+:root {
+  --page-gutter-desktop: 32px;
+  --page-gutter-tablet: 22px;
+  --page-gutter-mobile: 16px;
+}
+
+/* Gornja bijela traka i sivi radni prostor uvijek koriste isti horizontalni gutter. */
+#topbar {
+  padding-left: var(--page-gutter-desktop) !important;
+  padding-right: var(--page-gutter-desktop) !important;
+  width: 100%;
+}
+
+#page-content {
+  padding-left: var(--page-gutter-desktop) !important;
+  padding-right: var(--page-gutter-desktop) !important;
+  width: 100%;
+}
+
+/* Svaka aktivna stranica koristi cijelu raspoloživu širinu bez skrivene asimetrije. */
+#page-content > .page.active {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Glavne cjeline dobijaju isti vanjski ritam kao na stranici Zgrade. */
+#page-content > .page.active > .toolbar-card,
+#page-content > .page.active > .table-toolbar-card,
+#page-content > .page.active > .dashboard-hero,
+#page-content > .page.active > .summary-strip,
+#page-content > .page.active > .app-card,
+#page-content > .page.active > .row,
+#page-content > .page.active > .alert,
+#page-content > .page.active > .back-bar {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* Unutrašnji sadržaj u karticama ostaje unutar okvira i vizuelno je poravnat. */
+.app-card,
+.toolbar-card,
+.table-toolbar-card,
+.summary-item,
+.metric-box,
+.building-card,
+.stat-card {
+  min-width: 0;
+}
+
+@media (max-width: 991px) {
+  #topbar {
+    padding-left: var(--page-gutter-tablet) !important;
+    padding-right: var(--page-gutter-tablet) !important;
+  }
+
+  #page-content {
+    padding-left: var(--page-gutter-tablet) !important;
+    padding-right: var(--page-gutter-tablet) !important;
+  }
+}
+
+@media (max-width: 576px) {
+  #topbar {
+    padding-left: var(--page-gutter-mobile) !important;
+    padding-right: var(--page-gutter-mobile) !important;
+  }
+
+  #page-content {
+    padding-left: var(--page-gutter-mobile) !important;
+    padding-right: var(--page-gutter-mobile) !important;
+    padding-bottom: 24px !important;
+  }
+}
