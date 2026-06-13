@@ -1028,3 +1028,192 @@ body {
     min-height: auto;
   }
 }
+
+/* ── Responsive dorade za telefone ──
+   Na malim ekranima aplikacija se prebacuje u jednostavniji tok: toolbar kontrole idu jedna ispod druge,
+   tabele se pretvaraju u kartice, a dugački tekstovi se sigurno prelamaju unutar okvira. */
+html, body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+#app-wrapper,
+#main-wrapper,
+#page-content,
+.page,
+.app-card,
+.toolbar-card,
+.dashboard-hero {
+  max-width: 100%;
+}
+.app-card,
+.stat-card,
+.building-card,
+.toolbar-card,
+.dashboard-hero,
+.metric-box {
+  min-width: 0;
+}
+.metric-box strong,
+.focus-row strong,
+.dashboard-hero h2,
+.dashboard-hero p,
+.ticket-table td,
+.ticket-table th {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+.metric-box strong {
+  font-size: clamp(.92rem, 2.8vw, 1.12rem);
+}
+@media (max-width: 576px) {
+  #page-content {
+    padding: 14px;
+    overflow-x: hidden;
+  }
+  #topbar {
+    height: 64px;
+    padding: 0 16px;
+  }
+  #topbar #page-title {
+    font-size: 1.08rem;
+    line-height: 1.2;
+  }
+  .dashboard-hero {
+    padding: 20px;
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .dashboard-hero h2 {
+    font-size: clamp(1.5rem, 8vw, 2rem);
+    line-height: 1.12;
+  }
+  .dashboard-hero p {
+    font-size: .95rem;
+    line-height: 1.45;
+  }
+  .dashboard-hero .eyebrow {
+    font-size: .68rem;
+    letter-spacing: .12em;
+  }
+  .hero-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .toolbar-card {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 14px;
+  }
+  .toolbar-left,
+  .toolbar-right {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 9px;
+    width: 100%;
+    min-width: 0;
+  }
+  .toolbar-left .form-control,
+  .toolbar-left .form-select,
+  .toolbar-right .btn,
+  .toolbar-right label.btn {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    justify-content: center;
+    white-space: normal;
+  }
+  .page-fill {
+    min-height: auto;
+  }
+  .stat-card {
+    padding: 18px;
+  }
+  .stat-card .stat-value {
+    font-size: 1.7rem;
+  }
+  .metrics-compact {
+    grid-template-columns: 1fr 1fr;
+  }
+  .metric-box {
+    min-height: 78px;
+    padding: 10px;
+  }
+  .focus-row {
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .focus-row strong {
+    text-align: right;
+    max-width: 55%;
+  }
+}
+
+/* Mobilni prikaz tabela: umjesto široke tabele koja pravi horizontalno pomjeranje,
+   svaki red postaje kartica sa labelama lijevo i vrijednostima desno. */
+@media (max-width: 768px) {
+  .app-card .card-body-custom {
+    overflow-x: visible;
+  }
+  .wide-table,
+  .ticket-table {
+    min-width: 0 !important;
+    width: 100%;
+    display: block;
+    border-collapse: separate;
+  }
+  .ticket-table thead {
+    display: none;
+  }
+  .ticket-table tbody {
+    display: grid;
+    gap: 12px;
+    padding: 12px;
+  }
+  .ticket-table tbody tr {
+    display: grid;
+    gap: 8px;
+    padding: 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: var(--card-shadow);
+  }
+  .ticket-table tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+    border: 0;
+    padding: 0;
+    width: 100%;
+    font-size: .9rem;
+    text-align: right;
+  }
+  .ticket-table tbody td::before {
+    content: attr(data-label);
+    flex: 0 0 42%;
+    text-align: left;
+    color: #64748b;
+    font-size: .72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+  .ticket-table tbody td[data-label="Naslov"],
+  .ticket-table tbody td[data-label="Korisnik"] {
+    display: block;
+    text-align: left;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .ticket-table tbody td[data-label="Naslov"]::before,
+  .ticket-table tbody td[data-label="Korisnik"]::before {
+    display: block;
+    margin-bottom: 6px;
+  }
+  .ticket-table tbody td[data-label="Akcije"] > div {
+    width: 100%;
+  }
+}

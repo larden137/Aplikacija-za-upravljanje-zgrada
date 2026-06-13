@@ -8,6 +8,8 @@ import * as XLSX from 'xlsx';
 const App = {
   currentPage: null,
   currentParams: {},
+  previousPage: null,
+  previousParams: {},
   _initialized: false,
 
   // ── OSNOVNE POSTAVKE ───────────────────────────────────────────────────
@@ -720,18 +722,18 @@ const App = {
           const s = DB.findById('users', t.stanarId);
           const a = t.assignedTo ? DB.findById('users', t.assignedTo) : null;
           return `<tr onclick="App.navigate('ticket-detail',{id:'${t.id}'})">
-            <td class="text-tiny text-secondary">${String(i+1).padStart(3,'0')}</td>
-            <td>
+            <td data-label="#" class="text-tiny text-secondary">${String(i+1).padStart(3,'0')}</td>
+            <td data-label="Naslov">
               <div class="fw-600">${this.esc(t.title)}</div>
               <div class="text-tiny text-secondary">${this.catIcon(t.category)} ${this.CATEGORIES[t.category]||t.category}</div>
             </td>
-            ${u.role !== 'stanar' ? `<td class="text-tiny">${s ? this.esc(s.name) : '—'}</td>` : ''}
-            <td class="text-tiny">${b ? this.esc(b.name) : '—'}</td>
-            <td>${this.catIcon(t.category)}</td>
-            <td>${this.priorityBadge(t.priority)}</td>
-            <td>${this.statusBadge(t.status)}</td>
-            ${u.role === 'administrator' ? `<td class="text-tiny">${a ? this.esc(a.name) : '<span class="text-secondary">—</span>'}</td>` : ''}
-            <td class="text-tiny text-secondary">${this.fmtDate(t.createdAt)}</td>
+            ${u.role !== 'stanar' ? `<td data-label="Podnosilac" class="text-tiny">${s ? this.esc(s.name) : '—'}</td>` : ''}
+            <td data-label="Zgrada" class="text-tiny">${b ? this.esc(b.name) : '—'}</td>
+            <td data-label="Kategorija">${this.catIcon(t.category)}</td>
+            <td data-label="Prioritet">${this.priorityBadge(t.priority)}</td>
+            <td data-label="Status">${this.statusBadge(t.status)}</td>
+            ${u.role === 'administrator' ? `<td data-label="Dodijeljeno" class="text-tiny">${a ? this.esc(a.name) : '<span class="text-secondary">—</span>'}</td>` : ''}
+            <td data-label="Datum" class="text-tiny text-secondary">${this.fmtDate(t.createdAt)}</td>
           </tr>`;
         }).join('')}
       </tbody>
@@ -789,7 +791,7 @@ const App = {
     const el = document.getElementById('page-ticket-detail');
     el.innerHTML = `
       <div class="mb-3">
-        <button class="btn btn-sm btn-outline-secondary" onclick="App.navigate('tickets')">
+        <button class="btn btn-sm btn-outline-secondary" onclick="App.goBack('tickets')">
           <i class="bi bi-arrow-left me-1"></i>Nazad
         </button>
       </div>
@@ -2177,7 +2179,12 @@ const App = {
   },
 
   // Router je proširen za stranicu administratorskih zahtjeva i za dashboard parametre.
+  // Prije otvaranja nove stranice pamtimo prethodnu masku kako dugme Nazad vraća korisnika tamo odakle je došao.
   navigate(page, params = {}) {
+    if (this.currentPage && page !== this.currentPage) {
+      this.previousPage = this.currentPage;
+      this.previousParams = this.currentParams || {};
+    }
     this.currentPage = page;
     this.currentParams = params;
     this.setActiveNav(page);
@@ -2206,6 +2213,16 @@ const App = {
     };
     renders[page]?.();
     this.closeSidebar();
+  },
+
+
+  // Vraća korisnika na prethodnu masku. Ako historija nije dostupna, vraća na listu tiketa.
+  goBack(fallback = 'tickets') {
+    const page = this.previousPage || fallback;
+    const params = this.previousParams || {};
+    this.previousPage = null;
+    this.previousParams = {};
+    this.navigate(page, params);
   },
 
   // Administratorski dashboard je vizuelno proširen tako da velike rezolucije ne ostaju prazne.
@@ -2499,14 +2516,14 @@ const App = {
         const building = user.buildingId ? DB.findById('buildings', user.buildingId) : null;
         const buildingNames = user.buildingIds?.length ? user.buildingIds.map(bid => DB.findById('buildings', bid)?.name || '?').join(', ') : '';
         return `<tr onclick="App.navigate('user-profile',{id:'${user.id}'})" style="cursor:pointer">
-          <td><div class="d-flex align-items-center gap-2"><div class="avatar avatar-${user.id}">${initials}</div><div><div class="fw-600">${this.esc(user.name)}</div><div class="text-tiny text-secondary">${this.esc(user.phone || '')}</div></div></div></td>
-          <td class="text-tiny">${this.esc(user.email)}</td>
-          <td><span class="role-badge role-${user.role}">${this.ROLES[user.role] || user.role}</span></td>
-          <td class="text-tiny">${user.role === 'uposlenik' ? this.esc(user.position || '—') : '—'}</td>
-          <td class="text-tiny">${user.role === 'stanar' ? this.esc(user.reference || '—') : this.esc(user.reference || '—')}</td>
-          <td class="text-tiny">${building ? this.esc(building.name) : (buildingNames || '—')}${user.apartment ? `<br><span class="text-secondary">${this.esc(user.apartment)}</span>` : ''}</td>
-          <td><span class="badge ${user.active ? 'bg-success' : 'bg-secondary'}">${user.active ? 'Aktivan' : 'Neaktivan'}</span></td>
-          <td onclick="event.stopPropagation()"><div class="d-flex gap-1">${Auth.is('administrator') ? `<button class="btn btn-sm btn-outline-secondary" onclick="App.openUserModal('${user.id}')"><i class="bi bi-pencil"></i></button><button class="btn btn-sm btn-outline-${user.active?'danger':'success'}" onclick="App.toggleUser('${user.id}')"><i class="bi bi-${user.active?'person-x':'person-check'}"></i></button>` : '<span class="text-secondary text-tiny">Pregled</span>'}</div></td>
+          <td data-label="Korisnik"><div class="d-flex align-items-center gap-2"><div class="avatar avatar-${user.id}">${initials}</div><div><div class="fw-600">${this.esc(user.name)}</div><div class="text-tiny text-secondary">${this.esc(user.phone || '')}</div></div></div></td>
+          <td data-label="Email" class="text-tiny">${this.esc(user.email)}</td>
+          <td data-label="Uloga"><span class="role-badge role-${user.role}">${this.ROLES[user.role] || user.role}</span></td>
+          <td data-label="Pozicija" class="text-tiny">${user.role === 'uposlenik' ? this.esc(user.position || '—') : '—'}</td>
+          <td data-label="Referenca" class="text-tiny">${user.role === 'stanar' ? this.esc(user.reference || '—') : this.esc(user.reference || '—')}</td>
+          <td data-label="Zgrada / Stan" class="text-tiny">${building ? this.esc(building.name) : (buildingNames || '—')}${user.apartment ? `<br><span class="text-secondary">${this.esc(user.apartment)}</span>` : ''}</td>
+          <td data-label="Status"><span class="badge ${user.active ? 'bg-success' : 'bg-secondary'}">${user.active ? 'Aktivan' : 'Neaktivan'}</span></td>
+          <td data-label="Akcije" onclick="event.stopPropagation()"><div class="d-flex gap-1 justify-content-end">${Auth.is('administrator') ? `<button class="btn btn-sm btn-outline-secondary" onclick="App.openUserModal('${user.id}')"><i class="bi bi-pencil"></i></button><button class="btn btn-sm btn-outline-${user.active?'danger':'success'}" onclick="App.toggleUser('${user.id}')"><i class="bi bi-${user.active?'person-x':'person-check'}"></i></button>` : '<span class="text-secondary text-tiny">Pregled</span>'}</div></td>
         </tr>`;
       }).join('')}
     </tbody></table>`;
