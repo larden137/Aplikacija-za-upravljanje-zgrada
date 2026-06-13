@@ -708,7 +708,7 @@ const App = {
   _ticketsTable(tickets) {
     const u = Auth.currentUser;
     if (!tickets.length) return `<div class="empty-state"><i class="bi bi-inbox"></i><p>Nema tiketa koji odgovaraju filtru.</p></div>`;
-    return `<table class="ticket-table">
+    return `<table class="ticket-table tickets-table">
       <thead><tr>
         <th>#</th><th>Naslov</th>
         ${u.role !== 'stanar' ? '<th>Podnosilac</th>' : ''}
@@ -1560,7 +1560,7 @@ const App = {
   // Generiše tabelu korisnika sa ulogama, statusom i akcijama.
   _usersTable(users) {
     if (!users.length) return `<div class="empty-state"><i class="bi bi-people"></i><p>Nema korisnika.</p></div>`;
-    return `<table class="ticket-table">
+    return `<table class="ticket-table tickets-table">
       <thead><tr><th>Korisnik</th><th>Email</th><th>Uloga</th><th>Zgrada / Stan</th><th>Status</th><th>Akcije</th></tr></thead>
       <tbody>
         ${users.map(u => {
@@ -2336,7 +2336,7 @@ const App = {
     const el = document.getElementById('page-tickets');
     el.innerHTML = `
       ${this.currentParams.fromDashboard ? this._backToDashboardBar(title) : ''}
-      <div class="toolbar-card mb-3">
+      <div class="toolbar-card mb-3 table-toolbar-card">
         <div class="toolbar-left">
           <select class="form-select form-select-sm" id="filter-status" onchange="App.filterTickets()"><option value="">Svi statusi</option>${Object.entries(this.STATUS_LABELS).map(([k,v]) => `<option value="${k}">${v}</option>`).join('')}</select>
           <select class="form-select form-select-sm" id="filter-priority" onchange="App.filterTickets()"><option value="">Svi prioriteti</option>${Object.entries(this.PRIORITIES).map(([k,v]) => `<option value="${k}">${v}</option>`).join('')}</select>
@@ -2348,36 +2348,17 @@ const App = {
         </div>
       </div>
 
-      <div class="row g-3 align-items-stretch">
-        <div class="col-12 col-xxl-9">
-          <div class="app-card page-fill h-100">
-            <div class="card-body-custom" id="tickets-table-wrap">${this._ticketsTable(visibleTickets)}</div>
-          </div>
-        </div>
-        <div class="col-12 col-xxl-3">
-          <div class="page-side-stack desktop-sticky">
-            <div class="app-card">
-              <div class="card-header-custom"><h6><i class="bi bi-activity me-2"></i>Sažetak prikaza</h6></div>
-              <div class="p-3">
-                <div class="metrics-compact">
-                  <div class="metric-box"><span>Ukupno</span><strong>${visibleTickets.length}</strong></div>
-                  <div class="metric-box"><span>Aktivni</span><strong>${activeCount}</strong></div>
-                  <div class="metric-box"><span>Na čekanju</span><strong>${waitingCount}</strong></div>
-                  <div class="metric-box"><span>Dodijeljeni</span><strong>${assignedCount}</strong></div>
-                  <div class="metric-box"><span>Riješeni</span><strong>${solvedCount}</strong></div>
-                  <div class="metric-box"><span>Vaša uloga</span><strong>${this.esc(this.ROLES[u.role] || u.role)}</strong></div>
-                </div>
-              </div>
-            </div>
-            <div class="app-card">
-              <div class="card-header-custom"><h6><i class="bi bi-lightning-charge me-2"></i>Brza napomena</h6></div>
-              <div class="p-3 small text-secondary">
-                <p class="mb-2">Koristi filtere iznad tabele kako bi brzo došao do tiketa po statusu, prioritetu ili zgradi.</p>
-                <p class="mb-0">Klik na bilo koji red vodi direktno na detalje tiketa i dalju obradu.</p>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div class="summary-strip mb-3">
+        <div class="summary-item"><span>Ukupno</span><strong>${visibleTickets.length}</strong></div>
+        <div class="summary-item"><span>Aktivni</span><strong>${activeCount}</strong></div>
+        <div class="summary-item"><span>Na čekanju</span><strong>${waitingCount}</strong></div>
+        <div class="summary-item"><span>Dodijeljeni</span><strong>${assignedCount}</strong></div>
+        <div class="summary-item"><span>Riješeni</span><strong>${solvedCount}</strong></div>
+        <div class="summary-item"><span>Uloga</span><strong>${this.esc(this.ROLES[u.role] || u.role)}</strong></div>
+      </div>
+
+      <div class="app-card page-fill table-page-card">
+        <div class="card-body-custom" id="tickets-table-wrap">${this._ticketsTable(visibleTickets)}</div>
       </div>`;
   },
 
@@ -2459,12 +2440,15 @@ const App = {
 
     const activeCount = users.filter(item => item.active).length;
     const inactiveCount = users.filter(item => !item.active).length;
-    const roleStats = Object.keys(this.ROLES).map(role => ({ role, count: users.filter(item => item.role === role).length })).filter(item => item.count > 0);
+    const adminCount = users.filter(item => item.role === 'administrator').length;
+    const povCount = users.filter(item => item.role === 'povjerenik').length;
+    const empCount = users.filter(item => item.role === 'uposlenik').length;
+    const residentCount = users.filter(item => item.role === 'stanar').length;
 
     const el = document.getElementById('page-users');
     el.innerHTML = `
       ${this.currentParams.fromDashboard ? this._backToDashboardBar(isAdmin ? 'Korisnici' : 'Stanari') : ''}
-      <div class="toolbar-card mb-3">
+      <div class="toolbar-card mb-3 table-toolbar-card">
         <div class="toolbar-left">
           <input type="text" class="form-control form-control-sm" id="user-search" placeholder="Pretraži korisnike..." oninput="App.filterUsers()">
           ${isAdmin ? `<select class="form-select form-select-sm" id="user-role-filter" onchange="App.filterUsers()"><option value="">Sve uloge</option>${Object.entries(this.ROLES).map(([k,v]) => `<option value="${k}">${v}</option>`).join('')}</select>` : `<input type="hidden" id="user-role-filter" value="stanar">`}
@@ -2478,31 +2462,18 @@ const App = {
       </div>
       ${isPovjerenik ? `<div class="alert alert-info small">Povjerenik može preuzeti template i uploadovati stanare samo za zgrade koje su mu dodijeljene. Upload ide administratoru na odobrenje.</div>` : ''}
 
-      <div class="row g-3 align-items-stretch">
-        <div class="col-12 col-xxl-9">
-          <div class="app-card page-fill h-100"><div class="card-body-custom" id="users-table-wrap">${this._usersTable(users)}</div></div>
-        </div>
-        <div class="col-12 col-xxl-3">
-          <div class="page-side-stack desktop-sticky">
-            <div class="app-card">
-              <div class="card-header-custom"><h6><i class="bi bi-people me-2"></i>Sažetak korisnika</h6></div>
-              <div class="p-3">
-                <div class="metrics-compact">
-                  <div class="metric-box"><span>Ukupno</span><strong>${users.length}</strong></div>
-                  <div class="metric-box"><span>Aktivni</span><strong>${activeCount}</strong></div>
-                  <div class="metric-box"><span>Neaktivni</span><strong>${inactiveCount}</strong></div>
-                  <div class="metric-box"><span>Prikaz</span><strong>${isAdmin ? 'Svi' : 'Stanari'}</strong></div>
-                </div>
-              </div>
-            </div>
-            <div class="app-card">
-              <div class="card-header-custom"><h6><i class="bi bi-bar-chart me-2"></i>Raspodjela po ulozi</h6></div>
-              <div class="p-3">
-                ${roleStats.map(item => `<div class="focus-row"><span>${this.esc(this.ROLES[item.role] || item.role)}</span><strong>${item.count}</strong></div>`).join('') || '<div class="text-secondary small">Nema podataka za prikaz.</div>'}
-              </div>
-            </div>
-          </div>
-        </div>
+      <div class="summary-strip mb-3">
+        <div class="summary-item"><span>Ukupno</span><strong>${users.length}</strong></div>
+        <div class="summary-item"><span>Aktivni</span><strong>${activeCount}</strong></div>
+        <div class="summary-item"><span>Neaktivni</span><strong>${inactiveCount}</strong></div>
+        <div class="summary-item"><span>Admin</span><strong>${adminCount}</strong></div>
+        <div class="summary-item"><span>Povjerenici</span><strong>${povCount}</strong></div>
+        <div class="summary-item"><span>Uposlenici</span><strong>${empCount}</strong></div>
+        <div class="summary-item"><span>Stanari</span><strong>${residentCount}</strong></div>
+      </div>
+
+      <div class="app-card page-fill table-page-card">
+        <div class="card-body-custom" id="users-table-wrap">${this._usersTable(users)}</div>
       </div>
       ${isAdmin ? this._userModal() : ''}`;
   },
@@ -2510,7 +2481,7 @@ const App = {
   // Tabela korisnika sadrži dodatne kolone tražene u specifikaciji: poziciju, referencu, zgradu i status.
   _usersTable(users) {
     if (!users.length) return `<div class="empty-state"><i class="bi bi-people"></i><p>Nema korisnika.</p></div>`;
-    return `<table class="ticket-table wide-table"><thead><tr><th>Korisnik</th><th>Email</th><th>Uloga</th><th>Pozicija</th><th>Referenca</th><th>Zgrada / Stan</th><th>Status</th><th>Akcije</th></tr></thead><tbody>
+    return `<table class="ticket-table users-table wide-table"><thead><tr><th>Korisnik</th><th>Email</th><th>Uloga</th><th>Pozicija</th><th>Referenca</th><th>Zgrada / Stan</th><th>Status</th><th>Akcije</th></tr></thead><tbody>
       ${users.map(user => {
         const initials = (user.name || '?').split(' ').map(n=>n[0]).join('').substr(0,2).toUpperCase();
         const building = user.buildingId ? DB.findById('buildings', user.buildingId) : null;
