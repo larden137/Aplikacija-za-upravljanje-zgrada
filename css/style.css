@@ -1715,3 +1715,117 @@ html, body {
     padding-bottom: 24px !important;
   }
 }
+
+
+/* ── V11: dodatno ujednačavanje prozora koji još nisu pratili referencu stranice Zgrade ──
+   Cilj ovog bloka je da Dashboard, Tiketi, Korisnici i Obavijesti zauzimaju istu radnu širinu
+   kao i Zgrade/Zahtjevi, bez osjećaja da je sadržaj "uži" ili da bježi od desne ivice. */
+@media (min-width: 992px) {
+  #main-wrapper {
+    width: calc(100vw - var(--sidebar-width));
+    max-width: calc(100vw - var(--sidebar-width));
+    overflow-x: hidden;
+  }
+
+  #topbar,
+  #page-content {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 991px) {
+  #main-wrapper {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+/* Ključne stranice dobijaju isti puni raspored kao referentni modul Zgrade. */
+#page-dashboard,
+#page-tickets,
+#page-users,
+#page-notifications,
+#page-admin-requests {
+  width: 100%;
+  max-width: 100%;
+}
+
+#page-dashboard .dashboard-hero,
+#page-dashboard .dashboard-grid-fill,
+#page-dashboard .dashboard-main-grid,
+#page-tickets .table-toolbar-card,
+#page-tickets .summary-strip,
+#page-tickets .table-page-card,
+#page-users .table-toolbar-card,
+#page-users .summary-strip,
+#page-users .table-page-card,
+#page-notifications > .row,
+#page-admin-requests > .row {
+  width: 100%;
+  max-width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* Bočne kolone na obavijestima i zahtjevima popunjavaju raspoloživi prostor već na standardnom desktopu. */
+@media (min-width: 1200px) {
+  #page-notifications .col-12.col-xxl-8,
+  #page-admin-requests .col-12.col-xxl-8 {
+    flex: 0 0 68%;
+    max-width: 68%;
+  }
+
+  #page-notifications .col-12.col-xxl-4,
+  #page-admin-requests .col-12.col-xxl-4 {
+    flex: 0 0 32%;
+    max-width: 32%;
+  }
+}
+
+/* Obavijesti mogu koristiti širi red poruke kako se glavni panel ne bi doimao uskim. */
+#page-notifications .notif-msg {
+  max-width: none;
+}
+
+/* Tabele korisnika i tiketa ostaju u okviru kartice i imaju uredniji završetak s desne strane. */
+#page-users .table-page-card,
+#page-tickets .table-page-card {
+  overflow: hidden;
+}
+
+#page-users .card-body-custom,
+#page-tickets .card-body-custom {
+  padding-right: 6px;
+}
+
+#page-users .users-table th:last-child,
+#page-users .users-table td:last-child {
+  min-width: 92px;
+}
+
+#page-tickets .tickets-table th:last-child,
+#page-tickets .tickets-table td:last-child {
+  min-width: 128px;
+}
+
+/* Gornja bijela traka treba izgledati isto na svim ekranima i uvijek elegantno završiti s desne strane. */
+#topbar .topbar-actions {
+  padding-right: 2px;
+}
+
+/* Na telefonima zadržavamo jednake vanjske margine i kompaktan ritam kartica. */
+@media (max-width: 576px) {
+  #page-dashboard .dashboard-hero,
+  #page-notifications > .row,
+  #page-admin-requests > .row,
+  #page-users .table-toolbar-card,
+  #page-users .summary-strip,
+  #page-users .table-page-card,
+  #page-tickets .table-toolbar-card,
+  #page-tickets .summary-strip,
+  #page-tickets .table-page-card {
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
