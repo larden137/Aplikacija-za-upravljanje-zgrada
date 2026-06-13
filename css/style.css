@@ -1417,3 +1417,163 @@ html, body {
     display: block;
   }
 }
+
+/* Klikabilna oznaka za tikete na čekanju u kartici zgrade. */
+.building-pending-badge {
+  cursor: pointer;
+  padding: .38rem .65rem;
+  border-radius: 999px;
+  font-weight: 700;
+}
+.building-pending-badge:hover {
+  filter: brightness(.96);
+  transform: translateY(-1px);
+}
+
+/* Modal za prikaz privremene lozinke nakon odobrenog reset zahtjeva. */
+.password-result-modal {
+  box-shadow: 0 20px 70px rgba(15, 23, 42, .32);
+}
+.password-result-box {
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  border-radius: 14px;
+  padding: 14px;
+}
+.password-result-box span {
+  display: block;
+  color: #64748b;
+  font-size: .78rem;
+  margin-bottom: 4px;
+}
+.password-result-box strong {
+  color: #0f172a;
+  overflow-wrap: anywhere;
+}
+.password-code {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: #0f172a;
+  color: #fff;
+  font-size: .95rem;
+  letter-spacing: .02em;
+  overflow-wrap: anywhere;
+}
+
+
+/* ── Dodatna fina prilagodba za telefone ──
+   Ovaj blok dodatno sređuje raspored kontrola i sažetaka na malim ekranima,
+   kako bi korisnik brže došao do glavne tabele bez osjećaja prevelikih praznina. */
+@media (max-width: 576px) {
+  /* Sekcije Korisnici i Tiketi na telefonu dobijaju kompaktniji gornji dio. */
+  #page-users .table-toolbar-card,
+  #page-tickets .table-toolbar-card {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  #page-users .toolbar-right,
+  #page-tickets .toolbar-right {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+  }
+
+  #page-users .toolbar-right .btn,
+  #page-users .toolbar-right label.btn,
+  #page-tickets .toolbar-right .btn,
+  #page-tickets .toolbar-right label.btn {
+    min-height: 48px;
+    font-size: .94rem;
+    padding: .72rem .78rem;
+  }
+
+  /* Primarno dugme ide preko cijele širine da ostane jasno istaknuto. */
+  #page-users .toolbar-right .btn-primary,
+  #page-tickets .toolbar-right .btn-primary {
+    grid-column: 1 / -1;
+  }
+
+  /* Sažeci ostaju u dvije kolone da ne guraju glavni sadržaj predaleko ispod. */
+  #page-users .summary-strip,
+  #page-tickets .summary-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  #page-users .summary-item,
+  #page-tickets .summary-item {
+    min-height: 86px;
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  #page-users .summary-item span,
+  #page-tickets .summary-item span {
+    font-size: .82rem;
+  }
+
+  #page-users .summary-item strong,
+  #page-tickets .summary-item strong {
+    font-size: 1.05rem;
+    line-height: 1.15;
+  }
+
+  /* Tabele/kartice dobijaju manje paddinge i uredniji ritam na telefonu. */
+  #page-users .ticket-table tbody,
+  #page-tickets .ticket-table tbody {
+    gap: 10px;
+  }
+
+  #page-users .ticket-table tbody tr,
+  #page-tickets .ticket-table tbody tr {
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  #page-users .ticket-table tbody td,
+  #page-tickets .ticket-table tbody td {
+    gap: 10px;
+    font-size: .88rem;
+  }
+
+  #page-users .ticket-table tbody td::before,
+  #page-tickets .ticket-table tbody td::before {
+    flex-basis: 40%;
+    font-size: .68rem;
+  }
+}
+
+@media (max-width: 420px) {
+  /* Na većini telefona zadržavamo dvije kartice u redu, ali uz još kompaktniji prikaz. */
+  #page-users .summary-strip,
+  #page-tickets .summary-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #page-users .summary-item,
+  #page-tickets .summary-item {
+    min-height: 82px;
+    padding: 10px 12px;
+  }
+
+  #page-users .toolbar-right,
+  #page-tickets .toolbar-right {
+    grid-template-columns: 1fr;
+  }
+
+  #page-users .toolbar-right .btn-primary,
+  #page-tickets .toolbar-right .btn-primary {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 360px) {
+  /* Tek na baš uskim ekranima spuštamo sažetke u jednu kolonu radi čitljivosti. */
+  #page-users .summary-strip,
+  #page-tickets .summary-strip {
+    grid-template-columns: 1fr;
+  }
+}

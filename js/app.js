@@ -1423,8 +1423,8 @@ const App = {
             <div class="text-tiny text-secondary">Povjerenik</div>
           </div>
         </div>` : ''}
-        <div class="d-flex gap-2 mt-3">
-          ${pending > 0 ? `<span class="badge bg-warning text-dark">${pending} na čekanju</span>` : ''}
+        <div class="d-flex gap-2 mt-3 align-items-center flex-wrap">
+          ${pending > 0 ? `<button type="button" class="badge bg-warning text-dark border-0 building-pending-badge" onclick="event.stopPropagation(); App.viewBuildingTickets('${b.id}', 'novi')" title="Prikaži nove tikete za ovu zgradu">${pending} na čekanju</button>` : ''}
           <button class="btn btn-sm btn-outline-primary ms-auto" onclick="App.viewBuildingTickets('${b.id}')">
             Tiketi <i class="bi bi-arrow-right"></i>
           </button>
@@ -1521,12 +1521,16 @@ const App = {
   },
 
   // Filtrira prikaz tiketa na odabranu zgradu.
-  viewBuildingTickets(buildingId) {
-    this.navigate('tickets');
-    setTimeout(() => {
-      const sel = document.getElementById('filter-building');
-      if (sel) { sel.value = buildingId; this.filterTickets(); }
-    }, 100);
+  // Kada se klikne na broj tiketa na čekanju, dodatno se postavlja status "Novi".
+  viewBuildingTickets(buildingId, status = '') {
+    const building = DB.findById('buildings', buildingId);
+    const statusLabel = status ? (this.STATUS_LABELS[status] || status) : '';
+    this.navigate('tickets', {
+      fromDashboard: true,
+      dashboardTitle: status ? `${building?.name || 'Zgrada'} - ${statusLabel}` : `${building?.name || 'Zgrada'} - tiketi`,
+      presetBuildingId: buildingId,
+      presetStatus: status
+    });
   },
 
   // ── USERS ─────────────────────────────────────────────────────────────
@@ -2360,6 +2364,16 @@ const App = {
       <div class="app-card page-fill table-page-card">
         <div class="card-body-custom" id="tickets-table-wrap">${this._ticketsTable(visibleTickets)}</div>
       </div>`;
+
+    // Preset filteri se koriste kada korisnik dođe iz kartice zgrade ili dashboarda.
+    // Na taj način stranica odmah pokaže relevantne tikete bez dodatnog ručnog filtriranja.
+    if (this.currentParams.presetBuildingId || this.currentParams.presetStatus) {
+      const buildingFilter = document.getElementById('filter-building');
+      const statusFilter = document.getElementById('filter-status');
+      if (buildingFilter && this.currentParams.presetBuildingId) buildingFilter.value = this.currentParams.presetBuildingId;
+      if (statusFilter && this.currentParams.presetStatus) statusFilter.value = this.currentParams.presetStatus;
+      this.filterTickets();
+    }
   },
 
   // Pregled zgrada dobija export/import alate za administratora i puniji grid na velikim ekranima.
@@ -2836,8 +2850,50 @@ const App = {
     const newPassword = this._randomPassword();
     DB.update('users', user.id, { password: newPassword });
     DB.update('passwordResetRequests', id, { status: 'odobren', reviewedBy: Auth.currentUser.id, reviewedAt: new Date().toISOString(), newPassword });
-    this.toast(`Nova privremena lozinka za ${user.email}: ${newPassword}`, 'success');
     this.renderAdminRequests();
+    this.showPasswordResetPopup(user.email, newPassword);
+  },
+
+  // Prikazuje privremenu lozinku u modalu koji ostaje otvoren dok administrator ne potvrdi.
+  // Ovo je sigurnije za demo rad od kratkog toast-a, jer administrator ima vremena da prepiše lozinku.
+  showPasswordResetPopup(email, password) {
+    const existing = document.getElementById('passwordResetResultModal');
+    if (existing) existing.remove();
+
+    const modalWrap = document.createElement('div');
+    modalWrap.innerHTML = `
+      <div class="modal fade" id="passwordResetResultModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content border-0 rounded-4 password-result-modal">
+            <div class="modal-header border-0 pb-0">
+              <h5 class="modal-title"><i class="bi bi-key me-2 text-primary"></i>Nova privremena lozinka</h5>
+            </div>
+            <div class="modal-body">
+              <p class="text-secondary small mb-3">Zahtjev za reset lozinke je odobren. Privremenu lozinku dostavi korisniku i preporuči da je promijeni nakon prijave.</p>
+              <div class="password-result-box">
+                <span>Korisnik</span>
+                <strong>${this.esc(email)}</strong>
+              </div>
+              <div class="password-result-box mt-2">
+                <span>Privremena lozinka</span>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                  <code class="password-code" id="generated-password-value">${this.esc(password)}</code>
+                  <button type="button" class="btn btn-sm btn-outline-primary" onclick="navigator.clipboard?.writeText(document.getElementById('generated-password-value').textContent); App.toast('Lozinka kopirana.', 'success')">
+                    <i class="bi bi-clipboard me-1"></i>Kopiraj
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+              <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(modalWrap.firstElementChild);
+    const modal = new bootstrap.Modal(document.getElementById('passwordResetResultModal'));
+    document.getElementById('passwordResetResultModal').addEventListener('hidden.bs.modal', event => event.target.remove(), { once: true });
+    modal.show();
   },
 
   // Odobrenjem batch importa korisnici se kreiraju kao neaktivni i mogu se posebno aktivirati nakon provjere.
