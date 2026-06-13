@@ -16,6 +16,13 @@
 
 * { box-sizing: border-box; }
 
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  overflow-x: hidden;
+}
+
 body {
   background: var(--body-bg);
   font-family: 'Segoe UI', system-ui, sans-serif;
@@ -1575,5 +1582,58 @@ html, body {
   #page-users .summary-strip,
   #page-tickets .summary-strip {
     grid-template-columns: 1fr;
+  }
+}
+
+
+/* ── Ujednačavanje lijevog i desnog prostora ──
+   Ovaj blok osigurava da gornja bijela traka uvijek ide do kraja ekrana,
+   te da sivi razmaci lijevo i desno budu ravnomjerni na svim uređajima. */
+:root {
+  --page-gutter: clamp(16px, 2.2vw, 28px);
+}
+
+#topbar {
+  width: 100%;
+  padding-left: var(--page-gutter);
+  padding-right: var(--page-gutter);
+}
+
+#page-content {
+  padding-left: var(--page-gutter);
+  padding-right: var(--page-gutter);
+}
+
+/* Kartice i tabele dobijaju isti horizontalni ritam kroz cijelu aplikaciju. */
+.table-toolbar-card,
+.summary-strip,
+.app-card,
+.dashboard-hero,
+.buildings-grid-wide,
+.ticket-table-responsive {
+  width: 100%;
+}
+
+@media (max-width: 576px) {
+  :root {
+    --page-gutter: 16px;
+  }
+
+  /* Na telefonu header treba biti punom širinom, bez osjećaja da je uvučen. */
+  #topbar {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  #page-content {
+    padding-top: 16px;
+    padding-left: 16px;
+    padding-right: 16px;
+    padding-bottom: 24px;
+  }
+
+  /* Naslovni red i notifikacije dobijaju uredniji razmak. */
+  #topbar .btn-notif {
+    margin-left: auto;
   }
 }
