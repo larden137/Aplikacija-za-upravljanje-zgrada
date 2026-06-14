@@ -1558,6 +1558,8 @@ const App = {
     const statusLabel = status ? (this.STATUS_LABELS[status] || status) : '';
     this.navigate('tickets', {
       fromDashboard: true,
+      backPage: 'buildings',
+      backLabel: 'Nazad na zgrade',
       dashboardTitle: status ? `${building?.name || 'Zgrada'} - ${statusLabel}` : `${building?.name || 'Zgrada'} - tiketi`,
       presetBuildingId: buildingId,
       presetStatus: status
@@ -1892,7 +1894,7 @@ const App = {
     const el = document.getElementById('page-user-profile');
     el.innerHTML = `
       <div class="mb-3">
-        <button class="btn btn-sm btn-outline-secondary" onclick="App.navigate('${u.role === 'uposlenik' || u.role === 'povjerenik' || isAdmin ? 'users' : 'dashboard'}')">
+        <button class="btn btn-sm btn-outline-secondary" onclick="App.goBack('users')">
           <i class="bi bi-arrow-left me-1"></i>Nazad
         </button>
       </div>
@@ -2230,6 +2232,13 @@ const App = {
       notifications: 'Obavijesti', 'user-profile': 'Profil Korisnika', 'admin-requests': 'Zahtjevi'
     };
     document.getElementById('page-title').textContent = titles[page] || page;
+
+    // Ukloni stare instance modala i backdropa prije renderovanja nove maske.
+    // Ovo sprečava situaciju da se otvori modal iz skrivene stranice pa ekran izgleda zaleđen.
+    document.querySelectorAll('#userModal').forEach(modal => modal.remove());
+    document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
+    document.body.classList.remove('modal-open');
+    document.body.style.removeProperty('padding-right');
 
     document.querySelectorAll('.page').forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
     const pageEl = document.getElementById(`page-${page}`);
@@ -2975,7 +2984,9 @@ const App = {
 
   // Pomoćni toolbar za prikaze koji su otvoreni iz dashboard kartica.
   _backToDashboardBar(title) {
-    return `<div class="back-dashboard-bar"><button class="btn btn-sm btn-outline-secondary" onclick="App.navigate('dashboard')"><i class="bi bi-arrow-left me-1"></i>Nazad na dashboard</button><strong>${this.esc(title)}</strong></div>`;
+    const backPage = this.currentParams?.backPage || 'dashboard';
+    const backLabel = this.currentParams?.backLabel || 'Nazad na dashboard';
+    return `<div class="back-dashboard-bar"><button class="btn btn-sm btn-outline-secondary" onclick="App.navigate('${backPage}')"><i class="bi bi-arrow-left me-1"></i>${this.esc(backLabel)}</button><strong>${this.esc(title)}</strong></div>`;
   },
 
   // Čitanje Excel fajla je zajedničko za korisnike i zgrade.
