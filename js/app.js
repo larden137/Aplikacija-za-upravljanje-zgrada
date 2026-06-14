@@ -1055,7 +1055,8 @@ const App = {
                 <option value="">-- Odaberite --</option>
                 ${employees.map(e => {
                   const active = DB.find('tickets', t => t.assignedTo === e.id && !['rijesen','zatvoren'].includes(t.status)).length;
-                  return `<option value="${e.id}">${this.esc(e.name)} (${active} aktivnih)`;
+                  const position = e.position ? ` - ${this.esc(e.position)}` : ' - Uposlenik';
+                  return `<option value="${e.id}">${this.esc(e.name)}${position} (${active} aktivnih)</option>`;
                 }).join('')}
               </select>
             </div>
