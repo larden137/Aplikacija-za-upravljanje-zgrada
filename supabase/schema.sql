@@ -1,5 +1,5 @@
 -- ZgradaApp Supabase schema
--- Ovaj fajl kreira tabele, indekse, demo podatke i osnovne dozvole za fakultetsku/demo verziju aplikacije.
+-- Ovaj fajl kreira tabele, indekse i osnovne dozvole za fakultetsku/demo verziju aplikacije.
 -- U produkciji treba preći na Supabase Auth i restriktivne RLS policy-je po korisniku.
 
 -- ZgradaApp / Supabase setup
@@ -226,68 +226,5 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS building_ids TEXT[] DEFAULT '{
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ;
 ALTER TABLE public.buildings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ;
 
--- Demo korisnici. ON CONFLICT čuva postojeće ID-jeve i ažurira demo podatke ako ih ponovo pokreneš.
-INSERT INTO public.users (id, name, email, password, role, building_id, building_ids, apartment, active, reference, hire_year, position, bio, phone, created_at)
-VALUES
-('u1', 'Haris Hodžić', 'admin@zgrada.ba', 'admin123', 'administrator', NULL, ARRAY[]::TEXT[], NULL, TRUE, 'ADM-2017-001', 2017, 'Sistem Administrator', 'Odgovoran za cjelokupno funkcionisanje platforme.', '061 111 222', NOW() - INTERVAL '30 days'),
-('u2', 'Alma Begić', 'povjerenik1@zgrada.ba', 'test123', 'povjerenik', NULL, ARRAY['b1','b2']::TEXT[], NULL, TRUE, 'POV-2019-001', 2019, NULL, NULL, NULL, NOW() - INTERVAL '29 days'),
-('u3', 'Mirza Kovač', 'povjerenik2@zgrada.ba', 'test123', 'povjerenik', NULL, ARRAY['b3']::TEXT[], NULL, TRUE, 'POV-2020-002', 2020, NULL, NULL, NULL, NOW() - INTERVAL '28 days'),
-('u4', 'Amira Džaferović', 'stanar1@zgrada.ba', 'test123', 'stanar', 'b1', ARRAY[]::TEXT[], 'Stan 12', TRUE, 'ZG-B1-0012', NULL, NULL, NULL, NULL, NOW() - INTERVAL '27 days'),
-('u5', 'Senad Muratović', 'stanar2@zgrada.ba', 'test123', 'stanar', 'b1', ARRAY[]::TEXT[], 'Stan 24', TRUE, 'ZG-B1-0024', NULL, NULL, NULL, NULL, NOW() - INTERVAL '26 days'),
-('u6', 'Lejla Hasanović', 'stanar3@zgrada.ba', 'test123', 'stanar', 'b2', ARRAY[]::TEXT[], 'Stan 5', TRUE, 'ZG-B2-0005', NULL, NULL, NULL, NULL, NOW() - INTERVAL '25 days'),
-('u7', 'Dino Ćatić', 'stanar4@zgrada.ba', 'test123', 'stanar', 'b3', ARRAY[]::TEXT[], 'Stan 8', TRUE, 'ZG-B3-0008', NULL, NULL, NULL, NULL, NOW() - INTERVAL '24 days'),
-('u8', 'Emir Tahić', 'uposlenik1@zgrada.ba', 'test123', 'uposlenik', NULL, ARRAY[]::TEXT[], NULL, TRUE, 'EMP-2018-001', 2018, 'Tehničar elektroinstalacija', NULL, NULL, NOW() - INTERVAL '23 days'),
-('u9', 'Dina Omerović', 'uposlenik2@zgrada.ba', 'test123', 'uposlenik', NULL, ARRAY[]::TEXT[], NULL, TRUE, 'EMP-2019-002', 2019, 'Vodoinstalater', NULL, NULL, NOW() - INTERVAL '22 days'),
-('u10', 'Kemal Bašić', 'uposlenik3@zgrada.ba', 'test123', 'uposlenik', NULL, ARRAY[]::TEXT[], NULL, TRUE, 'EMP-2020-003', 2020, 'Čistač', NULL, NULL, NOW() - INTERVAL '21 days')
-ON CONFLICT (id) DO UPDATE SET
-  name = EXCLUDED.name,
-  email = EXCLUDED.email,
-  password = EXCLUDED.password,
-  role = EXCLUDED.role,
-  building_id = EXCLUDED.building_id,
-  building_ids = EXCLUDED.building_ids,
-  apartment = EXCLUDED.apartment,
-  active = EXCLUDED.active,
-  reference = EXCLUDED.reference,
-  hire_year = EXCLUDED.hire_year,
-  position = EXCLUDED.position,
-  bio = EXCLUDED.bio,
-  phone = EXCLUDED.phone;
-
-INSERT INTO public.buildings (id, name, address, city, postal_code, floors, units, povjerenik_id, created_at)
-VALUES
-('b1', 'Trg heroja 5', 'Trg heroja 5', 'Sarajevo', '71000', 10, 40, 'u2', NOW() - INTERVAL '20 days'),
-('b2', 'Bulevar Mire 8', 'Bulevar Mire 8', 'Sarajevo', '71000', 8, 32, 'u2', NOW() - INTERVAL '19 days'),
-('b3', 'Ferhadija 12', 'Ferhadija 12', 'Sarajevo', '71000', 6, 24, 'u3', NOW() - INTERVAL '18 days')
-ON CONFLICT (id) DO UPDATE SET
-  name = EXCLUDED.name,
-  address = EXCLUDED.address,
-  city = EXCLUDED.city,
-  postal_code = EXCLUDED.postal_code,
-  floors = EXCLUDED.floors,
-  units = EXCLUDED.units,
-  povjerenik_id = EXCLUDED.povjerenik_id;
-
-INSERT INTO public.tickets (id, title, description, stanar_id, building_id, category, priority, status, assigned_to, povjerenik_note, status_history, created_at)
-VALUES
-('t001', 'Oštećen poštanski sandučić - stan 7', 'Sandučić je slomljen.', 'u4', 'b1', 'konstrukcija', 'niska', 'novi', NULL, NULL, jsonb_build_array(jsonb_build_object('status','novi','changedBy','u4','changedAt',(NOW() - INTERVAL '1 day')::TEXT,'note',NULL)), NOW() - INTERVAL '1 day'),
-('t002', 'Kvar na liftu - ne radi od juče', 'Lift je u kvaru.', 'u5', 'b1', 'lift', 'visoka', 'u_toku', 'u8', NULL, jsonb_build_array(jsonb_build_object('status','u_toku','changedBy','u8','changedAt',(NOW() - INTERVAL '5 days')::TEXT,'note',NULL)), NOW() - INTERVAL '5 days'),
-('t003', 'Problem s centralnim grijanjem - hladni radijatori', 'Grijanje ne radi.', 'u4', 'b1', 'grijanje', 'srednja', 'odobren', NULL, NULL, jsonb_build_array(jsonb_build_object('status','odobren','changedBy','u2','changedAt',(NOW() - INTERVAL '1 day')::TEXT,'note',NULL)), NOW() - INTERVAL '1 day'),
-('t004', 'Oštećena ulazna vrata zgrade - brava ne radi', 'Vrata ne zatvaraju.', 'u5', 'b2', 'konstrukcija', 'visoka', 'dodjeljen', 'u8', NULL, jsonb_build_array(jsonb_build_object('status','dodjeljen','changedBy','u1','changedAt',(NOW() - INTERVAL '3 days')::TEXT,'note',NULL)), NOW() - INTERVAL '3 days'),
-('t005', 'Curenje vode u hodniku 2. sprat', 'Voda curi iz plafona.', 'u6', 'b2', 'vodoinstalacije', 'visoka', 'odobren', NULL, NULL, jsonb_build_array(jsonb_build_object('status','odobren','changedBy','u2','changedAt',(NOW() - INTERVAL '2 days')::TEXT,'note',NULL)), NOW() - INTERVAL '2 days'),
-('t006', 'Kvar na pumpi za vodu - gornji spratovi bez pritiska', 'Nema vode na gornjim spratovima.', 'u4', 'b3', 'vodoinstalacije', 'hitna', 'zatvoren', 'u9', NULL, jsonb_build_array(jsonb_build_object('status','zatvoren','changedBy','u4','changedAt',(NOW() - INTERVAL '13 days')::TEXT,'note',NULL)), NOW() - INTERVAL '13 days'),
-('t007', 'Vodovodna cijev pukla u podrumu zgrade', 'Voda curi u podrumu.', 'u5', 'b3', 'vodoinstalacije', 'hitna', 'u_toku', 'u9', NULL, jsonb_build_array(jsonb_build_object('status','u_toku','changedBy','u9','changedAt',(NOW() - INTERVAL '2 days')::TEXT,'note',NULL)), NOW() - INTERVAL '2 days'),
-('t008', 'Buka od susjednog stana - noćna buka', 'Smetaju noćne buke.', 'u7', 'b3', 'ostalo', 'niska', 'odbijen', NULL, 'Nije predmet tehničkog održavanja.', jsonb_build_array(jsonb_build_object('status','odbijen','changedBy','u3','changedAt',(NOW() - INTERVAL '26 days')::TEXT,'note','Nije predmet tehničkog održavanja.')), NOW() - INTERVAL '26 days'),
-('t009', 'Kvar na električnom priključku - iskre', 'Vidim iskre kod priključka.', 'u5', 'b1', 'elektrika', 'hitna', 'rijesen', 'u8', NULL, jsonb_build_array(jsonb_build_object('status','rijesen','changedBy','u8','changedAt',(NOW() - INTERVAL '8 days')::TEXT,'note',NULL)), NOW() - INTERVAL '8 days'),
-('t010', 'Vodovodna instalacija - curenje ispod umivaonika', 'Curi ispod umivaonika.', 'u6', 'b2', 'vodoinstalacije', 'srednja', 'rijesen', 'u9', NULL, jsonb_build_array(jsonb_build_object('status','rijesen','changedBy','u9','changedAt',(NOW() - INTERVAL '5 days')::TEXT,'note',NULL)), NOW() - INTERVAL '5 days')
-ON CONFLICT (id) DO UPDATE SET
-  title = EXCLUDED.title,
-  description = EXCLUDED.description,
-  stanar_id = EXCLUDED.stanar_id,
-  building_id = EXCLUDED.building_id,
-  category = EXCLUDED.category,
-  priority = EXCLUDED.priority,
-  status = EXCLUDED.status,
-  assigned_to = EXCLUDED.assigned_to,
-  povjerenik_note = EXCLUDED.povjerenik_note,
-  status_history = EXCLUDED.status_history;
+-- Demo podaci nisu uključeni u schema.sql.
+-- Za unos demo podataka koristi zasebne SQL/Excel import fajlove.

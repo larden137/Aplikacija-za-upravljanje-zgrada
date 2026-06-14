@@ -2,7 +2,7 @@
 // Supabase je jedini trajni izvor podataka.
 // Memory cache postoji samo dok je stranica otvorena, jer ostatak aplikacije očekuje brze sinhrone metode.
 
-import DBAsync, { getDemoData } from './db.js';
+import DBAsync from './db.js';
 
 // Kolekcije koje aplikacija koristi kroz sve ekrane.
 const CACHE_KEYS = [
@@ -230,15 +230,9 @@ const DB = {
   },
 
   async seed() {
-    // Seed sada ide u Supabase, nikada u localStorage.
-    if (cache.users.length > 0) return;
-
-    try {
-      await DBAsync.seed();
-      await syncFromSupabase();
-    } catch (error) {
-      notifySyncError('seed', 'all', error?.message || String(error));
-    }
+    // Automatski seed je namjerno isključen.
+    // Aplikacija sada prikazuje isključivo podatke koji postoje u Supabase bazi.
+    return;
   },
 
   async preload() {

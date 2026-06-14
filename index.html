@@ -49,25 +49,11 @@
       </div>
     </form>
 
-    <!-- Demo nalozi služe za brzo testiranje različitih uloga u aplikaciji. -->
-    <div class="demo-accounts">
+    <!-- Demo nalozi se više ne drže zakucani u kodu.
+         Lista se dinamički popunjava iz Supabase tabele users. -->
+    <div class="demo-accounts" id="demo-accounts">
       <h6><i class="bi bi-info-circle me-1"></i>Demo nalozi (kliknite za popunjavanje)</h6>
-      <div class="demo-row" onclick="App.fillDemo('admin@zgrada.ba','admin123')">
-        <span class="demo-role">Administrator</span>
-        <span class="demo-creds">admin@zgrada.ba / admin123</span>
-      </div>
-      <div class="demo-row" onclick="App.fillDemo('povjerenik1@zgrada.ba','test123')">
-        <span class="demo-role">Povjerenik</span>
-        <span class="demo-creds">povjerenik1@zgrada.ba / test123</span>
-      </div>
-      <div class="demo-row" onclick="App.fillDemo('uposlenik1@zgrada.ba','test123')">
-        <span class="demo-role">Uposlenik</span>
-        <span class="demo-creds">uposlenik1@zgrada.ba / test123</span>
-      </div>
-      <div class="demo-row" onclick="App.fillDemo('stanar1@zgrada.ba','test123')">
-        <span class="demo-role">Stanar</span>
-        <span class="demo-creds">stanar1@zgrada.ba / test123</span>
-      </div>
+      <div class="text-muted small">Učitavanje demo naloga iz Supabase baze...</div>
     </div>
   </div>
 </div>

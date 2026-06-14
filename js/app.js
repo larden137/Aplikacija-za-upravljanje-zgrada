@@ -44,7 +44,7 @@ const App = {
     this._initialized = true;
 
     await DB.preload();
-    await DB.seed();
+    this.renderDemoAccounts();
 
     if (await Auth.init()) {
       this.showApp();
@@ -235,6 +235,37 @@ const App = {
     document.getElementById('login-email').value = email;
     document.getElementById('login-pass').value  = pass;
   },
+  // Demo nalozi se prikazuju iz Supabase tabele users, a ne kao hardkodirani podaci u HTML-u.
+  // Za login prikaz uzimamo po jedan aktivan nalog za svaku ulogu.
+  renderDemoAccounts() {
+    const container = document.getElementById('demo-accounts');
+    if (!container) return;
+
+    const roleOrder = ['administrator', 'povjerenik', 'uposlenik', 'stanar'];
+    const roleLabels = this.ROLES || { administrator:'Administrator', povjerenik:'Povjerenik', uposlenik:'Uposlenik', stanar:'Stanar' };
+    const users = DB.findAll('users') || [];
+
+    const selected = roleOrder
+      .map(role => {
+        const candidates = users.filter(u => u.active !== false && u.role === role && u.email && u.password);
+        if (role === 'administrator') {
+          return candidates.find(u => String(u.name || '').toLowerCase().includes('fejsal shakur')) || candidates[0] || null;
+        }
+        return candidates[0] || null;
+      })
+      .filter(Boolean);
+
+    container.innerHTML = `
+      <h6><i class="bi bi-info-circle me-1"></i>Demo nalozi (kliknite za popunjavanje)</h6>
+      ${selected.length ? selected.map(u => `
+        <div class="demo-row" onclick="App.fillDemo('${String(u.email).replace(/'/g, "\'")}', '${String(u.password).replace(/'/g, "\'")}')">
+          <span class="demo-role">${roleLabels[u.role] || u.role}</span>
+          <span class="demo-creds">${u.email} / ${u.password}</span>
+        </div>
+      `).join('') : '<div class="text-muted small">Nema aktivnih demo korisnika u Supabase bazi.</div>'}
+    `;
+  },
+
 
   // Odjavljuje korisnika i vraća aplikaciju na login ekran.
   doLogout() {

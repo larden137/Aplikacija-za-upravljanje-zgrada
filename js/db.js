@@ -290,18 +290,11 @@ const DB = {
     if (error) console.error(`Greška pri brisanju iz baze (${collection}):`, error);
   },
 
-  // ── SEED (samo prvi put) ──
+  // ── SEED ──
   async seed() {
-    const existing = await this.findAll('users');
-    if (existing.length > 0) return existing;
-
-    const demo = getDemoData();
-    await upsertMany('users', demo.users);
-    await upsertMany('buildings', demo.buildings);
-    await upsertMany('tickets', demo.tickets);
-
-    if (import.meta.env.DEV) console.info('Baza je popunjena početnim demo podacima.');
-    return demo.users;
+    // Automatsko ubacivanje demo podataka je isključeno.
+    // Demo podaci se ubacuju isključivo ručno kroz Supabase SQL ili Excel import.
+    return [];
   }
 };
 
